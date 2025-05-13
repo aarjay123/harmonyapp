@@ -7,7 +7,7 @@ class PrivacyPolicyPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final controller = WebViewController()
-      ..loadRequest(Uri.parse('https://thehighlandcafe.github.io/hioswebcore/helpcenter/more/privacypolicy.html'));
+      ..loadRequest(Uri.parse('https://thehighlandcafe.github.io/hioswebcore/settings/privacypolicy.html'));
 
     return Scaffold(
       appBar: AppBar(title: const Text("Privacy Policy")),

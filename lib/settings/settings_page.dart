@@ -50,6 +50,17 @@ class _SettingsPageState extends State<SettingsPage> {
           ? WebViewWidget(controller: _webViewController)
           : ListView(
         children: [
+          // Appearance (WebView)
+          ListTile(
+            leading: const Icon(Icons.palette_rounded),
+            title: const Text("Appearance Settings"),
+            onTap: () {
+              setState(() {
+                showWebPage = true;
+              });
+            },
+          ),
+
           // Theme dropdown
           ListTile(
             leading: const Icon(Icons.brightness_6_rounded),
@@ -78,17 +89,6 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
           ),
 
-          // Appearance (WebView)
-          ListTile(
-            leading: const Icon(Icons.palette_rounded),
-            title: const Text("Appearance Settings"),
-            onTap: () {
-              setState(() {
-                showWebPage = true;
-              });
-            },
-          ),
-
           // Subpages
           const Divider(),
 
@@ -111,15 +111,6 @@ class _SettingsPageState extends State<SettingsPage> {
             },
           ),
           ListTile(
-            leading: const Icon(Icons.people),
-            title: const Text("Socials"),
-            onTap: () {
-              Navigator.push(context, MaterialPageRoute(
-                builder: (_) => const SocialsPage(),
-              ));
-            },
-          ),
-          ListTile(
             leading: const Icon(Icons.language),
             title: const Text("Websites"),
             onTap: () {
@@ -129,11 +120,11 @@ class _SettingsPageState extends State<SettingsPage> {
             },
           ),
           ListTile(
-            leading: const Icon(Icons.privacy_tip),
-            title: const Text("Privacy Policy"),
+            leading: const Icon(Icons.people),
+            title: const Text("Socials"),
             onTap: () {
               Navigator.push(context, MaterialPageRoute(
-                builder: (_) => const PrivacyPolicyPage(),
+                builder: (_) => const SocialsPage(),
               ));
             },
           ),
@@ -147,6 +138,18 @@ class _SettingsPageState extends State<SettingsPage> {
                 applicationVersion: '3.0',
                 applicationLegalese: 'Copyright © The Highland Cafe Ltd. 2025. All Rights Reserved.',
               );
+            },
+          ),
+
+          const Divider(),
+
+          ListTile(
+            leading: const Icon(Icons.privacy_tip),
+            title: const Text("Privacy Policy"),
+            onTap: () {
+              Navigator.push(context, MaterialPageRoute(
+                builder: (_) => const PrivacyPolicyPage(),
+              ));
             },
           ),
         ],

@@ -1,12 +1,16 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'theme_provider.dart';
 import 'settings/settings_page.dart'; // Ensure this file exists
+import 'helpcenter/helpcenter_page.dart'; // Ensure this file exists
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:webview_flutter_wkwebview/webview_flutter_wkwebview.dart';
 
 void main() {
-  WebViewPlatform.instance = WebKitWebViewPlatform();
+  if (Platform.isIOS || Platform.isMacOS) {
+    WebViewPlatform.instance = WebKitWebViewPlatform();
+  }
   runApp(
     ChangeNotifierProvider(
       create: (_) => ThemeProvider(),
@@ -23,9 +27,17 @@ class MyApp extends StatelessWidget {
     final themeProvider = Provider.of<ThemeProvider>(context);
 
     return MaterialApp(
-      title: 'HiOS',
-      theme: ThemeData.light(),
-      darkTheme: ThemeData.dark(),
+      title: 'Harmony',
+      theme: ThemeData.light().copyWith(
+        textTheme: ThemeData.light().textTheme.apply(
+          fontFamily: 'Outfit',
+        ),
+      ),
+      darkTheme: ThemeData.dark().copyWith(
+        textTheme: ThemeData.dark().textTheme.apply(
+          fontFamily: 'Outfit',
+        ),
+      ),
       themeMode: themeProvider.themeMode,
       home: const ResponsiveScaffold(),
     );
@@ -107,7 +119,10 @@ class _ResponsiveScaffoldState extends State<ResponsiveScaffold> {
         MaterialPageRoute(builder: (_) => const SettingsPage()),
       );
     } else if (value == 'help') {
-      // handle help
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const HelpcenterPage()),
+      );
     } else if (value == 'blog') {
       // handle blog
     }
