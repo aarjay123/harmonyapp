@@ -1,24 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 
-class PrivacyPolicyPage extends StatefulWidget {
-  const PrivacyPolicyPage({super.key});
+class AboutHioswebcore extends StatefulWidget {
+  const AboutHioswebcore({super.key});
 
   @override
-  State<PrivacyPolicyPage> createState() => _PrivacyPolicyPageState();
+  State<AboutHioswebcore> createState() => _AboutHioswebcoreState();
 }
 
-class _PrivacyPolicyPageState extends State<PrivacyPolicyPage> {
+class _AboutHioswebcoreState extends State<AboutHioswebcore> {
   late InAppWebViewController _webViewController;
 
-  final String privacyPolicyUrl = 'https://thehighlandcafe.github.io/hioswebcore/settings/privacypolicy.html';
+  final String url = 'https://thehighlandcafe.github.io/hioswebcore/helpcenter/more/about.html';
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Privacy Policy")),
+      appBar: AppBar(title: const Text("About HiOSCore")),
       body: InAppWebView(
-        initialUrlRequest: URLRequest(url: WebUri(privacyPolicyUrl)),
+        initialUrlRequest: URLRequest(url: WebUri(url)),
         initialSettings: InAppWebViewSettings(
           javaScriptEnabled: true,
         ),

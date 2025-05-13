@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:webview_flutter/webview_flutter.dart';
 import '../theme_provider.dart';
 import 'privacy_policy_page.dart';
 import 'websites_page.dart';
 import 'updates_page.dart';
 import 'apps_services_page.dart';
 import 'socials_page.dart';
+import 'web_settings_page.dart';
+import 'about_hioswebcore.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -16,53 +17,27 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
-  bool showWebPage = false;
-
-  final String webSettingsUrl = "https://thehighlandcafe.github.io/hioswebcore/activities/settingsActivity/settings_activities/appearance_activity";
-  late final WebViewController _webViewController;
-
-  @override
-  void initState() {
-    super.initState();
-    _webViewController = WebViewController()
-      ..setJavaScriptMode(JavaScriptMode.unrestricted) // Enable JavaScript
-      ..loadRequest(Uri.parse(webSettingsUrl));
-  }
-
   @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Settings"),
-        leading: showWebPage
-            ? IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded),
-          onPressed: () {
-            setState(() {
-              showWebPage = false;
-            });
-          },
-        )
-            : null,
-      ),
-      body: showWebPage
-          ? WebViewWidget(controller: _webViewController)
-          : ListView(
+      appBar: AppBar(title: const Text("Settings")),
+      body: ListView(
         children: [
-          // Appearance (WebView)
+          // Appearance Settings (opens WebSettingsPage)
           ListTile(
             leading: const Icon(Icons.palette_rounded),
             title: const Text("Appearance Settings"),
             onTap: () {
-              setState(() {
-                showWebPage = true;
-              });
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const WebSettingsPage()),
+              );
             },
           ),
 
-          // Theme dropdown
+          // Theme Mode
           ListTile(
             leading: const Icon(Icons.brightness_6_rounded),
             title: const Text("Theme"),
@@ -90,7 +65,6 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
           ),
 
-          // Subpages
           const Divider(),
 
           ListTile(
@@ -129,9 +103,22 @@ class _SettingsPageState extends State<SettingsPage> {
               ));
             },
           ),
+
+          const Divider(),
+
           ListTile(
-            leading: const Icon(Icons.info),
-            title: const Text("About"),
+            leading: const Icon(Icons.info_rounded),
+            title: const Text("About HiOSCore"),
+            onTap: () {
+              Navigator.push(context, MaterialPageRoute(
+                builder: (_) => const AboutHioswebcore(),
+              ));
+            },
+          ),
+
+          ListTile(
+            leading: const Icon(Icons.perm_device_info_rounded),
+            title: const Text("About App"),
             onTap: () {
               showAboutDialog(
                 context: context,

@@ -1,16 +1,20 @@
-import 'dart:io';
+import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'theme_provider.dart';
+import 'colour_scheme.dart';
 import 'settings/settings_page.dart';
 import 'helpcenter/helpcenter_page.dart';
-import 'package:webview_flutter/webview_flutter.dart';
-import 'package:webview_flutter_wkwebview/webview_flutter_wkwebview.dart';
+import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 
-void main() {
-  if (Platform.isIOS || Platform.isMacOS) {
-    WebViewPlatform.instance = WebKitWebViewPlatform();
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  if (!kIsWeb && (Platform.isAndroid || Platform.isIOS)) {
+    await InAppWebViewController.setWebContentsDebuggingEnabled(true);
   }
+
   runApp(
     ChangeNotifierProvider(
       create: (_) => ThemeProvider(),
@@ -28,15 +32,15 @@ class MyApp extends StatelessWidget {
 
     return MaterialApp(
       title: 'Harmony',
-      theme: ThemeData.light().copyWith(
-        textTheme: ThemeData.light().textTheme.apply(
-          fontFamily: 'Outfit',
-        ),
+      theme: ThemeData(
+        useMaterial3: true,
+        colorScheme: lightColorScheme,
+        textTheme: ThemeData.light().textTheme.apply(fontFamily: 'Outfit'),
       ),
-      darkTheme: ThemeData.dark().copyWith(
-        textTheme: ThemeData.dark().textTheme.apply(
-          fontFamily: 'Outfit',
-        ),
+      darkTheme: ThemeData(
+        useMaterial3: true,
+        colorScheme: darkColorScheme,
+        textTheme: ThemeData.dark().textTheme.apply(fontFamily: 'Outfit'),
       ),
       themeMode: themeProvider.themeMode,
       home: const ResponsiveScaffold(),
@@ -53,7 +57,7 @@ class ResponsiveScaffold extends StatefulWidget {
 
 class _ResponsiveScaffoldState extends State<ResponsiveScaffold> {
   int _selectedIndex = 0;
-  late final WebViewController _webViewController;
+  InAppWebViewController? _webViewController;
 
   final List<String> _urls = [
     'https://thehighlandcafe.github.io/hioswebcore/welcome.html',
@@ -69,20 +73,15 @@ class _ResponsiveScaffoldState extends State<ResponsiveScaffold> {
     'Room Key',
   ];
 
-  @override
-  void initState() {
-    super.initState();
-    // Initialize WebViewController
-    _webViewController = WebViewController()
-      ..setJavaScriptMode(JavaScriptMode.unrestricted) // Enable JavaScript
-      ..loadRequest(Uri.parse(_urls[_selectedIndex]));
-  }
-
   void _onItemTapped(int index) {
     setState(() {
       _selectedIndex = index;
     });
-    _webViewController.loadRequest(Uri.parse(_urls[index]));
+    _webViewController?.loadUrl(
+      urlRequest: URLRequest(
+        url: WebUri(_urls[index]),
+      ),
+    );
   }
 
   NavigationRail _buildNavigationRail(bool isWideScreen) {
@@ -125,8 +124,6 @@ class _ResponsiveScaffoldState extends State<ResponsiveScaffold> {
         context,
         MaterialPageRoute(builder: (_) => const HelpcenterPage()),
       );
-    } else if (value == 'blog') {
-      // handle blog
     }
   }
 
@@ -159,7 +156,21 @@ class _ResponsiveScaffoldState extends State<ResponsiveScaffold> {
       body: Row(
         children: [
           if (isWideScreen) _buildNavigationRail(isWideScreen),
-          Expanded(child: WebViewWidget(controller: _webViewController)),
+          Expanded(
+            child: InAppWebView(
+              initialUrlRequest: URLRequest(
+                url: WebUri(_urls[_selectedIndex]),
+              ),
+              initialOptions: InAppWebViewGroupOptions(
+                crossPlatform: InAppWebViewOptions(
+                  javaScriptEnabled: true,
+                ),
+              ),
+              onWebViewCreated: (controller) {
+                _webViewController = controller;
+              },
+            ),
+          ),
         ],
       ),
       bottomNavigationBar: isWideScreen ? null : _buildNavigationBar(),

@@ -10,7 +10,7 @@ class UpdatesPage extends StatelessWidget {
   Future<void> _launchExternalUrl(BuildContext context, String url) async {
     final uri = Uri.parse(url);
     if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
+      await launchUrl(uri);
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Could not launch the website.')),
@@ -34,7 +34,7 @@ class UpdatesPage extends StatelessWidget {
           ),
           ListTile(
           leading: const Icon(Icons.info),
-          title: const Text("This version: v3.0.0-alpha1"),
+          title: const Text("This version: v3.0.0-alpha2"),
           ),
           const Divider(),
           ListTile(
