@@ -2,8 +2,8 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'theme_provider.dart';
-import 'settings/settings_page.dart'; // Ensure this file exists
-import 'helpcenter/helpcenter_page.dart'; // Ensure this file exists
+import 'settings/settings_page.dart';
+import 'helpcenter/helpcenter_page.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:webview_flutter_wkwebview/webview_flutter_wkwebview.dart';
 
@@ -72,7 +72,9 @@ class _ResponsiveScaffoldState extends State<ResponsiveScaffold> {
   @override
   void initState() {
     super.initState();
+    // Initialize WebViewController
     _webViewController = WebViewController()
+      ..setJavaScriptMode(JavaScriptMode.unrestricted) // Enable JavaScript
       ..loadRequest(Uri.parse(_urls[_selectedIndex]));
   }
 
@@ -91,10 +93,10 @@ class _ResponsiveScaffoldState extends State<ResponsiveScaffold> {
           ? NavigationRailLabelType.all
           : NavigationRailLabelType.none,
       destinations: const [
-        NavigationRailDestination(icon: Icon(Icons.home), label: Text('Home')),
-        NavigationRailDestination(icon: Icon(Icons.restaurant), label: Text('Food')),
-        NavigationRailDestination(icon: Icon(Icons.hotel), label: Text('Hotel')),
-        NavigationRailDestination(icon: Icon(Icons.key), label: Text('Room Key')),
+        NavigationRailDestination(icon: Icon(Icons.home_rounded), label: Text('Home')),
+        NavigationRailDestination(icon: Icon(Icons.restaurant_rounded), label: Text('Food')),
+        NavigationRailDestination(icon: Icon(Icons.hotel_rounded), label: Text('Hotel')),
+        NavigationRailDestination(icon: Icon(Icons.key_rounded), label: Text('Room Key')),
       ],
     );
   }
@@ -104,10 +106,10 @@ class _ResponsiveScaffoldState extends State<ResponsiveScaffold> {
       selectedIndex: _selectedIndex,
       onDestinationSelected: _onItemTapped,
       destinations: const [
-        NavigationDestination(icon: Icon(Icons.home), label: 'Home'),
-        NavigationDestination(icon: Icon(Icons.restaurant), label: 'Food'),
-        NavigationDestination(icon: Icon(Icons.hotel), label: 'Hotel'),
-        NavigationDestination(icon: Icon(Icons.key), label: 'Room Key'),
+        NavigationDestination(icon: Icon(Icons.home_rounded), label: 'Home'),
+        NavigationDestination(icon: Icon(Icons.restaurant_rounded), label: 'Food'),
+        NavigationDestination(icon: Icon(Icons.hotel_rounded), label: 'Hotel'),
+        NavigationDestination(icon: Icon(Icons.key_rounded), label: 'Room Key'),
       ],
     );
   }

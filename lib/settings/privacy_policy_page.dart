@@ -7,6 +7,7 @@ class PrivacyPolicyPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final controller = WebViewController()
+      ..setJavaScriptMode(JavaScriptMode.unrestricted) // Enable JavaScript
       ..loadRequest(Uri.parse('https://thehighlandcafe.github.io/hioswebcore/settings/privacypolicy.html'));
 
     return Scaffold(

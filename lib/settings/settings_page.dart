@@ -25,6 +25,7 @@ class _SettingsPageState extends State<SettingsPage> {
   void initState() {
     super.initState();
     _webViewController = WebViewController()
+      ..setJavaScriptMode(JavaScriptMode.unrestricted) // Enable JavaScript
       ..loadRequest(Uri.parse(webSettingsUrl));
   }
 

@@ -28,9 +28,19 @@ class UpdatesPage extends StatelessWidget {
         children: [
           ListTile(
             leading: const Icon(Icons.download),
-            title: const Text("Download Harmony Update"),
+            title: const Text("Download Harmony Alpha Update"),
             subtitle: const Text("Download the latest app installer file.\n1. Tap here, then tap the installer matching your OS.\n2. Install the update how you usually would."),
             onTap: () => _launchExternalUrl(context, _latestUpdateUrl),
+          ),
+          ListTile(
+          leading: const Icon(Icons.info),
+          title: const Text("This version: v3.0.0-alpha1"),
+          ),
+          const Divider(),
+          ListTile(
+            leading: const Icon(Icons.info),
+            title: const Text("About Harmony Alpha"),
+            subtitle: const Text("Harmony Alpha is the successor to HiOSMobile -- the app is now based on Flutter, so is adaptive and cross-platform.\nThis app is in alpha, so will still be unstable!"),
           ),
         ]
       ),

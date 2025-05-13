@@ -25,7 +25,8 @@ class _HelpcenterPageState extends State<HelpcenterPage> {
   @override
   void initState() {
     super.initState();
-    _webViewController = WebViewController();
+    _webViewController = WebViewController()
+      ..setJavaScriptMode(JavaScriptMode.unrestricted); // Enable JavaScript
   }
 
   @override
@@ -54,21 +55,24 @@ class _HelpcenterPageState extends State<HelpcenterPage> {
             onTap: () => _loadWebPage(
                 "https://thehighlandcafe.github.io/hioswebcore/helpcenter/tutorial.html"),
           ),
+
+          const Divider(),
+
           ListTile(
             leading: const Icon(Icons.restaurant),
-            title: const Text("Food Services Help"),
+            title: const Text("Restaurant"),
             onTap: () => _loadWebPage(
                 "https://thehighlandcafe.github.io/hioswebcore/helpcenter/restaurant.html"),
           ),
           ListTile(
             leading: const Icon(Icons.hotel),
-            title: const Text("Hotel Help"),
+            title: const Text("Hotel"),
             onTap: () => _loadWebPage(
                 "https://thehighlandcafe.github.io/hioswebcore/helpcenter/hotel.html"),
           ),
           ListTile(
             leading: const Icon(Icons.vpn_key),
-            title: const Text("Room Key Help"),
+            title: const Text("Room Key"),
             onTap: () => _loadWebPage(
                 "https://thehighlandcafe.github.io/hioswebcore/helpcenter/roomkey.html"),
           ),
@@ -80,17 +84,23 @@ class _HelpcenterPageState extends State<HelpcenterPage> {
           ),
           ListTile(
             leading: const Icon(Icons.language),
-            title: const Text("Internet Help"),
+            title: const Text("Internet"),
             onTap: () => _loadWebPage(
                 "https://thehighlandcafe.github.io/hioswebcore/helpcenter/internet.html"),
           ),
           ListTile(
             leading: const Icon(Icons.update),
-            title: const Text("Updates Help"),
+            title: const Text("Updates"),
             onTap: () => _loadWebPage(
                 "https://thehighlandcafe.github.io/hioswebcore/helpcenter/updates.html"),
           ),
           const Divider(),
+          ListTile(
+            leading: const Icon(Icons.new_releases),
+            title: const Text("Coming Soon"),
+            onTap: () => _loadWebPage(
+              "https://sites.google.com/view/x-by-thc-comingsoon"),
+          ),
           ListTile(
             leading: const Icon(Icons.description),
             title: const Text("Terms & Conditions"),
