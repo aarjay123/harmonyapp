@@ -137,7 +137,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 context: context,
                 applicationName: 'Harmony by The Highland Cafe',
                 applicationVersion: '3.0',
-                applicationLegalese: 'Copyright © The Highland Cafe Ltd. 2025. All Rights Reserved.',
+                applicationLegalese: 'Copyright © The Highland Cafe™ Ltd. 2025. All rights Reserved.',
               );
             },
           ),
