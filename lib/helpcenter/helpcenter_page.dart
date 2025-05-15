@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:webview_flutter/webview_flutter.dart';
+import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 
 class HelpcenterPage extends StatefulWidget {
   const HelpcenterPage({super.key});
@@ -11,22 +11,17 @@ class HelpcenterPage extends StatefulWidget {
 class _HelpcenterPageState extends State<HelpcenterPage> {
   bool showWebPage = false;
   String currentUrl = '';
+  InAppWebViewController? _webViewController;
 
-  late final WebViewController _webViewController;
+  // Generate a unique key to force widget rebuild
+  Key webViewKey = UniqueKey();
 
   void _loadWebPage(String url) {
     setState(() {
       currentUrl = url;
       showWebPage = true;
-      _webViewController.loadRequest(Uri.parse(url));
+      webViewKey = UniqueKey(); // Force rebuild with new URL
     });
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    _webViewController = WebViewController()
-      ..setJavaScriptMode(JavaScriptMode.unrestricted); // Enable JavaScript
   }
 
   @override
@@ -46,7 +41,16 @@ class _HelpcenterPageState extends State<HelpcenterPage> {
             : null,
       ),
       body: showWebPage
-          ? WebViewWidget(controller: _webViewController)
+          ? InAppWebView(
+        key: webViewKey,
+        initialUrlRequest: URLRequest(url: WebUri(currentUrl)),
+        initialSettings: InAppWebViewSettings(
+          javaScriptEnabled: true,
+        ),
+        onWebViewCreated: (controller) {
+          _webViewController = controller;
+        },
+      )
           : ListView(
         children: [
           ListTile(
@@ -55,9 +59,7 @@ class _HelpcenterPageState extends State<HelpcenterPage> {
             onTap: () => _loadWebPage(
                 "https://thehighlandcafe.github.io/hioswebcore/helpcenter/tutorial.html"),
           ),
-
           const Divider(),
-
           ListTile(
             leading: const Icon(Icons.restaurant),
             title: const Text("Restaurant"),
@@ -99,7 +101,7 @@ class _HelpcenterPageState extends State<HelpcenterPage> {
             leading: const Icon(Icons.new_releases),
             title: const Text("Coming Soon"),
             onTap: () => _loadWebPage(
-              "https://sites.google.com/view/x-by-thc-comingsoon"),
+                "https://sites.google.com/view/x-by-thc-comingsoon"),
           ),
           ListTile(
             leading: const Icon(Icons.description),

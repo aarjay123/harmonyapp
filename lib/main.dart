@@ -1,4 +1,3 @@
-import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -7,13 +6,13 @@ import 'colour_scheme.dart';
 import 'settings/settings_page.dart';
 import 'helpcenter/helpcenter_page.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
+import 'package:url_launcher/url_launcher.dart';
+
+// Import the new fullscreen menu page
+import 'fullscreen_menu_page.dart'; // Adjust path if needed
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  if (!kIsWeb && (Platform.isAndroid || Platform.isIOS)) {
-    await InAppWebViewController.setWebContentsDebuggingEnabled(true);
-  }
 
   runApp(
     ChangeNotifierProvider(
@@ -31,6 +30,7 @@ class MyApp extends StatelessWidget {
     final themeProvider = Provider.of<ThemeProvider>(context);
 
     return MaterialApp(
+      debugShowCheckedModeBanner: false,
       title: 'Harmony',
       theme: ThemeData(
         useMaterial3: true,
@@ -78,9 +78,52 @@ class _ResponsiveScaffoldState extends State<ResponsiveScaffold> {
       _selectedIndex = index;
     });
     _webViewController?.loadUrl(
-      urlRequest: URLRequest(
-        url: WebUri(_urls[index]),
+      urlRequest: URLRequest(url: WebUri(_urls[index])),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bool isWideScreen = MediaQuery.of(context).size.width >= 600;
+
+    return Scaffold(
+      appBar: AppBar(
+        titleSpacing: 0,
+        title: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+          child: Text(
+            _titles[_selectedIndex],
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.menu),
+            onPressed: () {
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const FullscreenMenuPage()));
+            },
+          ),
+        ],
       ),
+      body: Row(
+        children: [
+          if (isWideScreen) _buildNavigationRail(isWideScreen),
+          Expanded(
+            child: InAppWebView(
+              initialUrlRequest: URLRequest(url: WebUri(_urls[_selectedIndex])),
+              initialOptions: InAppWebViewGroupOptions(
+                crossPlatform: InAppWebViewOptions(
+                  javaScriptEnabled: true,
+                ),
+              ),
+              onWebViewCreated: (controller) {
+                _webViewController = controller;
+              },
+            ),
+          ),
+        ],
+      ),
+      bottomNavigationBar: isWideScreen ? null : _buildNavigationBar(),
     );
   }
 
@@ -88,9 +131,7 @@ class _ResponsiveScaffoldState extends State<ResponsiveScaffold> {
     return NavigationRail(
       selectedIndex: _selectedIndex,
       onDestinationSelected: _onItemTapped,
-      labelType: isWideScreen
-          ? NavigationRailLabelType.all
-          : NavigationRailLabelType.none,
+      labelType: isWideScreen ? NavigationRailLabelType.all : NavigationRailLabelType.none,
       destinations: const [
         NavigationRailDestination(icon: Icon(Icons.home_rounded), label: Text('Home')),
         NavigationRailDestination(icon: Icon(Icons.restaurant_rounded), label: Text('Food')),
@@ -110,70 +151,6 @@ class _ResponsiveScaffoldState extends State<ResponsiveScaffold> {
         NavigationDestination(icon: Icon(Icons.hotel_rounded), label: 'Hotel'),
         NavigationDestination(icon: Icon(Icons.key_rounded), label: 'Room Key'),
       ],
-    );
-  }
-
-  void _handleMenuSelection(String value) {
-    if (value == 'settings') {
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => const SettingsPage()),
-      );
-    } else if (value == 'help') {
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => const HelpcenterPage()),
-      );
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final bool isWideScreen = MediaQuery.of(context).size.width >= 600;
-
-    return Scaffold(
-      appBar: AppBar(
-        titleSpacing: 0,
-        title: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0),
-          child: Text(
-            _titles[_selectedIndex],
-            style: Theme.of(context).textTheme.titleLarge,
-          ),
-        ),
-        actions: [
-          PopupMenuButton<String>(
-            icon: const Icon(Icons.more_vert),
-            onSelected: _handleMenuSelection,
-            itemBuilder: (context) => const [
-              PopupMenuItem(value: 'settings', child: Text('Settings')),
-              PopupMenuItem(value: 'help', child: Text('Help')),
-              PopupMenuItem(value: 'blog', child: Text('Visit Blog')),
-            ],
-          ),
-        ],
-      ),
-      body: Row(
-        children: [
-          if (isWideScreen) _buildNavigationRail(isWideScreen),
-          Expanded(
-            child: InAppWebView(
-              initialUrlRequest: URLRequest(
-                url: WebUri(_urls[_selectedIndex]),
-              ),
-              initialOptions: InAppWebViewGroupOptions(
-                crossPlatform: InAppWebViewOptions(
-                  javaScriptEnabled: true,
-                ),
-              ),
-              onWebViewCreated: (controller) {
-                _webViewController = controller;
-              },
-            ),
-          ),
-        ],
-      ),
-      bottomNavigationBar: isWideScreen ? null : _buildNavigationBar(),
     );
   }
 }
