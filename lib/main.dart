@@ -142,15 +142,24 @@ class _ResponsiveScaffoldState extends State<ResponsiveScaffold> {
   }
 
   Widget _buildNavigationBar() {
-    return NavigationBar(
-      selectedIndex: _selectedIndex,
-      onDestinationSelected: _onItemTapped,
-      destinations: const [
-        NavigationDestination(icon: Icon(Icons.home_rounded), label: 'Home'),
-        NavigationDestination(icon: Icon(Icons.restaurant_rounded), label: 'Food'),
-        NavigationDestination(icon: Icon(Icons.hotel_rounded), label: 'Hotel'),
-        NavigationDestination(icon: Icon(Icons.key_rounded), label: 'Room Key'),
-      ],
+    return Theme(
+      data: Theme.of(context).copyWith(
+        navigationBarTheme: const NavigationBarThemeData(
+          labelBehavior: NavigationDestinationLabelBehavior.alwaysHide,
+        ),
+      ),
+      child: NavigationBar(
+        selectedIndex: _selectedIndex,
+        onDestinationSelected: _onItemTapped,
+        height: 60,
+        destinations: const [
+          NavigationDestination(icon: Icon(Icons.home_rounded), label: 'Home'),
+          NavigationDestination(icon: Icon(Icons.restaurant_rounded), label: 'Food'),
+          NavigationDestination(icon: Icon(Icons.hotel_rounded), label: 'Hotel'),
+          NavigationDestination(icon: Icon(Icons.key_rounded), label: 'Room Key'),
+        ],
+      ),
     );
   }
+
 }

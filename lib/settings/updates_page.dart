@@ -34,13 +34,13 @@ class UpdatesPage extends StatelessWidget {
           ),
           ListTile(
           leading: const Icon(Icons.info),
-          title: const Text("This version: v3.0.0-alpha2"),
+          title: const Text("This version: v3.0.0-alpha3"),
           ),
           const Divider(),
           ListTile(
             leading: const Icon(Icons.info),
             title: const Text("About Harmony Alpha"),
-            subtitle: const Text("Harmony Alpha is the successor to HiOSMobile -- the app is now based on Flutter, so is adaptive and cross-platform.\nThis app is in alpha, so will still be unstable!"),
+            subtitle: const Text("Harmony Alpha is the successor to HiOSMobile -- the app is now based on Flutter, so is adaptive and cross-platform.\nThis app is in a development stage, so there may still be some bugs!"),
           ),
         ]
       ),
