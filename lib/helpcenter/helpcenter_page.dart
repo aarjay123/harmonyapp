@@ -31,7 +31,7 @@ class _HelpcenterPageState extends State<HelpcenterPage> {
         title: const Text("Help Center"),
         leading: showWebPage
             ? IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded),
+          icon: const Icon(Icons.arrow_back),
           onPressed: () {
             setState(() {
               showWebPage = false;

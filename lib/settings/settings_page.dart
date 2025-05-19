@@ -108,7 +108,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
           ListTile(
             leading: const Icon(Icons.info_rounded),
-            title: const Text("About HiOSCore"),
+            title: const Text("About HarmonyCore"),
             onTap: () {
               Navigator.push(context, MaterialPageRoute(
                 builder: (_) => const AboutHioswebcore(),

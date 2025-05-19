@@ -11,12 +11,12 @@ class AboutHioswebcore extends StatefulWidget {
 class _AboutHioswebcoreState extends State<AboutHioswebcore> {
   late InAppWebViewController _webViewController;
 
-  final String url = 'https://thehighlandcafe.github.io/hioswebcore/helpcenter/more/about.html';
+  final String url = 'https://thehighlandcafe.github.io/hioswebcore/helpcenter/more/about-harmony.html';
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("About HiOSCore")),
+      appBar: AppBar(title: const Text("About HarmonyCore")),
       body: InAppWebView(
         initialUrlRequest: URLRequest(url: WebUri(url)),
         initialSettings: InAppWebViewSettings(

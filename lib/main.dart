@@ -7,9 +7,9 @@ import 'settings/settings_page.dart';
 import 'helpcenter/helpcenter_page.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:url_launcher/url_launcher.dart';
-
-// Import the new fullscreen menu page
-import 'fullscreen_menu_page.dart'; // Adjust path if needed
+import 'fullscreen_menu_page.dart';
+import 'slide_page_route.dart';
+import 'global_slide_transition_builder.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -36,11 +36,29 @@ class MyApp extends StatelessWidget {
         useMaterial3: true,
         colorScheme: lightColorScheme,
         textTheme: ThemeData.light().textTheme.apply(fontFamily: 'Outfit'),
+        pageTransitionsTheme: PageTransitionsTheme(
+          builders: {
+            TargetPlatform.android: GlobalSlidePageTransitionsBuilder(),
+            TargetPlatform.iOS: GlobalSlidePageTransitionsBuilder(),
+            TargetPlatform.macOS: GlobalSlidePageTransitionsBuilder(),
+            TargetPlatform.windows: GlobalSlidePageTransitionsBuilder(),
+            TargetPlatform.linux: GlobalSlidePageTransitionsBuilder(),
+          },
+        ),
       ),
       darkTheme: ThemeData(
         useMaterial3: true,
         colorScheme: darkColorScheme,
         textTheme: ThemeData.dark().textTheme.apply(fontFamily: 'Outfit'),
+        pageTransitionsTheme: PageTransitionsTheme(
+          builders: {
+            TargetPlatform.android: GlobalSlidePageTransitionsBuilder(),
+            TargetPlatform.iOS: GlobalSlidePageTransitionsBuilder(),
+            TargetPlatform.macOS: GlobalSlidePageTransitionsBuilder(),
+            TargetPlatform.windows: GlobalSlidePageTransitionsBuilder(),
+            TargetPlatform.linux: GlobalSlidePageTransitionsBuilder(),
+          },
+        ),
       ),
       themeMode: themeProvider.themeMode,
       home: const ResponsiveScaffold(),
@@ -100,7 +118,12 @@ class _ResponsiveScaffoldState extends State<ResponsiveScaffold> {
           IconButton(
             icon: const Icon(Icons.menu),
             onPressed: () {
-              Navigator.push(context, MaterialPageRoute(builder: (_) => const FullscreenMenuPage()));
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const FullscreenMenuPage(),
+                ),
+              );
             },
           ),
         ],
@@ -161,5 +184,4 @@ class _ResponsiveScaffoldState extends State<ResponsiveScaffold> {
       ),
     );
   }
-
 }
