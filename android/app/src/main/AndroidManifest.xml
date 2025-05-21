@@ -1,10 +1,10 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.INTERNET"/>
     <application
-        android:label="Harmony Alpha"
+        android:label="Harmony"
         android:name="${applicationName}"
         android:hardwareAccelerated="true"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/launchericon2022modern">
         <activity
             android:name=".MainActivity"
             android:exported="true"
