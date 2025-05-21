@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:dynamic_color/dynamic_color.dart';
 import 'theme_provider.dart';
 import 'colour_scheme.dart';
 import 'settings/settings_page.dart';
@@ -8,8 +9,7 @@ import 'helpcenter/helpcenter_page.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'fullscreen_menu_page.dart';
-import 'slide_page_route.dart';
-import 'global_slide_transition_builder.dart';
+import 'global_slide_transition_builder.dart'; // For slide animation
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -27,41 +27,44 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final themeProvider = Provider.of<ThemeProvider>(context);
+    return DynamicColorBuilder(
+      builder: (ColorScheme? lightDynamic, ColorScheme? darkDynamic) {
+        final lightColor = lightDynamic ?? lightColorScheme;
+        final darkColor = darkDynamic ?? darkColorScheme;
 
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'Harmony',
-      theme: ThemeData(
-        useMaterial3: true,
-        colorScheme: lightColorScheme,
-        textTheme: ThemeData.light().textTheme.apply(fontFamily: 'Outfit'),
-        pageTransitionsTheme: PageTransitionsTheme(
-          builders: {
-            TargetPlatform.android: GlobalSlidePageTransitionsBuilder(),
-            TargetPlatform.iOS: GlobalSlidePageTransitionsBuilder(),
-            TargetPlatform.macOS: GlobalSlidePageTransitionsBuilder(),
-            TargetPlatform.windows: GlobalSlidePageTransitionsBuilder(),
-            TargetPlatform.linux: GlobalSlidePageTransitionsBuilder(),
+        return Consumer<ThemeProvider>(
+          builder: (context, themeProvider, _) {
+            return MaterialApp(
+              debugShowCheckedModeBanner: false,
+              title: 'Harmony',
+              themeMode: themeProvider.themeMode,
+              theme: ThemeData(
+                useMaterial3: true,
+                colorScheme: lightColor,
+                textTheme: ThemeData.light().textTheme.apply(fontFamily: 'Outfit'),
+                pageTransitionsTheme: PageTransitionsTheme(
+                  builders: {
+                    for (final platform in TargetPlatform.values)
+                      platform: GlobalSlidePageTransitionsBuilder(),
+                  },
+                ),
+              ),
+              darkTheme: ThemeData(
+                useMaterial3: true,
+                colorScheme: darkColor,
+                textTheme: ThemeData.dark().textTheme.apply(fontFamily: 'Outfit'),
+                pageTransitionsTheme: PageTransitionsTheme(
+                  builders: {
+                    for (final platform in TargetPlatform.values)
+                      platform: GlobalSlidePageTransitionsBuilder(),
+                  },
+                ),
+              ),
+              home: const ResponsiveScaffold(),
+            );
           },
-        ),
-      ),
-      darkTheme: ThemeData(
-        useMaterial3: true,
-        colorScheme: darkColorScheme,
-        textTheme: ThemeData.dark().textTheme.apply(fontFamily: 'Outfit'),
-        pageTransitionsTheme: PageTransitionsTheme(
-          builders: {
-            TargetPlatform.android: GlobalSlidePageTransitionsBuilder(),
-            TargetPlatform.iOS: GlobalSlidePageTransitionsBuilder(),
-            TargetPlatform.macOS: GlobalSlidePageTransitionsBuilder(),
-            TargetPlatform.windows: GlobalSlidePageTransitionsBuilder(),
-            TargetPlatform.linux: GlobalSlidePageTransitionsBuilder(),
-          },
-        ),
-      ),
-      themeMode: themeProvider.themeMode,
-      home: const ResponsiveScaffold(),
+        );
+      },
     );
   }
 }
@@ -76,6 +79,7 @@ class ResponsiveScaffold extends StatefulWidget {
 class _ResponsiveScaffoldState extends State<ResponsiveScaffold> {
   int _selectedIndex = 0;
   InAppWebViewController? _webViewController;
+  bool _isLoading = true;  // Track loading status
 
   final List<String> _urls = [
     'https://thehighlandcafe.github.io/hioswebcore/welcome.html',
@@ -94,9 +98,28 @@ class _ResponsiveScaffoldState extends State<ResponsiveScaffold> {
   void _onItemTapped(int index) {
     setState(() {
       _selectedIndex = index;
+      _isLoading = true; // Start loading spinner when changing page
     });
     _webViewController?.loadUrl(
       urlRequest: URLRequest(url: WebUri(_urls[index])),
+    );
+  }
+
+  void _showNoInternetDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('No Internet Connection'),
+        content: const Text(
+          'Unable to load the page. Please check your internet connection and try again.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('OK'),
+          )
+        ],
+      ),
     );
   }
 
@@ -132,16 +155,44 @@ class _ResponsiveScaffoldState extends State<ResponsiveScaffold> {
         children: [
           if (isWideScreen) _buildNavigationRail(isWideScreen),
           Expanded(
-            child: InAppWebView(
-              initialUrlRequest: URLRequest(url: WebUri(_urls[_selectedIndex])),
-              initialOptions: InAppWebViewGroupOptions(
-                crossPlatform: InAppWebViewOptions(
-                  javaScriptEnabled: true,
+            child: Stack(
+              children: [
+                InAppWebView(
+                  initialUrlRequest: URLRequest(url: WebUri(_urls[_selectedIndex])),
+                  initialOptions: InAppWebViewGroupOptions(
+                    crossPlatform: InAppWebViewOptions(javaScriptEnabled: true),
+                  ),
+                  onWebViewCreated: (controller) {
+                    _webViewController = controller;
+                  },
+                  onLoadStart: (controller, url) {
+                    setState(() {
+                      _isLoading = true;
+                    });
+                  },
+                  onLoadStop: (controller, url) {
+                    setState(() {
+                      _isLoading = false;
+                    });
+                  },
+                  onLoadError: (controller, url, code, message) {
+                    setState(() {
+                      _isLoading = false;
+                    });
+                    _showNoInternetDialog();
+                  },
+                  onLoadHttpError: (controller, url, statusCode, description) {
+                    setState(() {
+                      _isLoading = false;
+                    });
+                    // You can handle HTTP errors here if needed
+                  },
                 ),
-              ),
-              onWebViewCreated: (controller) {
-                _webViewController = controller;
-              },
+                if (_isLoading)
+                  const Center(
+                    child: CircularProgressIndicator(),
+                  ),
+              ],
             ),
           ),
         ],
@@ -154,7 +205,8 @@ class _ResponsiveScaffoldState extends State<ResponsiveScaffold> {
     return NavigationRail(
       selectedIndex: _selectedIndex,
       onDestinationSelected: _onItemTapped,
-      labelType: isWideScreen ? NavigationRailLabelType.all : NavigationRailLabelType.none,
+      labelType:
+      isWideScreen ? NavigationRailLabelType.all : NavigationRailLabelType.none,
       destinations: const [
         NavigationRailDestination(icon: Icon(Icons.home_rounded), label: Text('Home')),
         NavigationRailDestination(icon: Icon(Icons.restaurant_rounded), label: Text('Food')),
