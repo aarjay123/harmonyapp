@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 import 'package:dropdown_button2/dropdown_button2.dart';
 
 import '../theme_provider.dart';
+import '../app_colour_schemes.dart';
+
 import 'privacy_policy_page.dart';
 import 'websites_page.dart';
 import 'updates_page.dart';
@@ -11,10 +13,12 @@ import 'socials_page.dart';
 import 'web_settings_page.dart';
 import 'about_hioswebcore.dart';
 
-import '../device_info_helper.dart'; // <-- import your helper
+import '../device_info_helper.dart';
 
 class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key});
+
+  static const double dropdownWidth = 200; // Common dropdown width
 
   @override
   Widget build(BuildContext context) {
@@ -22,13 +26,11 @@ class SettingsPage extends StatelessWidget {
     final colorScheme = theme.colorScheme;
     final themeProvider = Provider.of<ThemeProvider>(context);
 
-    // FutureBuilder to get Android 12+ support
     return FutureBuilder<bool>(
       future: DeviceInfoHelper.supportsDynamicColor(),
       builder: (context, snapshot) {
-        // Default to false while loading/error
         final bool supportsDynamicColor = snapshot.data ?? false;
-        final bool switchEnabled = supportsDynamicColor;
+        final bool dynamicColorEnabled = themeProvider.useDynamicColor;
 
         final groups = [
           _SettingsGroup(
@@ -45,86 +47,30 @@ class SettingsPage extends StatelessWidget {
               _SettingsItem(
                 icon: Icons.brightness_6_rounded,
                 label: "Theme",
-                trailing: SizedBox(
-                  width: 130,
-                  child: DropdownButtonHideUnderline(
-                    child: DropdownButton2<ThemeMode>(
-                      isExpanded: true,
-                      value: themeProvider.themeMode,
-                      onChanged: (ThemeMode? mode) {
-                        if (mode != null) themeProvider.setTheme(mode);
-                      },
-                      items: const [
-                        DropdownMenuItem(
-                          value: ThemeMode.system,
-                          child: Text("System"),
-                        ),
-                        DropdownMenuItem(
-                          value: ThemeMode.light,
-                          child: Text("Light"),
-                        ),
-                        DropdownMenuItem(
-                          value: ThemeMode.dark,
-                          child: Text("Dark"),
-                        ),
-                      ],
-                      buttonStyleData: ButtonStyleData(
-                        height: 40,
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: colorScheme.outline),
-                          color: colorScheme.primaryContainer,
-                        ),
-                        elevation: 0,
-                      ),
-                      dropdownStyleData: DropdownStyleData(
-                        maxHeight: 160,
-                        width: 150,
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(14),
-                          color: colorScheme.surface,
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.1),
-                              blurRadius: 8,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                        elevation: 8,
-                        scrollbarTheme: ScrollbarThemeData(
-                          radius: const Radius.circular(8),
-                          thickness: MaterialStateProperty.all(6),
-                          thumbVisibility: MaterialStateProperty.all(true),
-                        ),
-                      ),
-                      iconStyleData: IconStyleData(
-                        icon: Icon(
-                          Icons.keyboard_arrow_down_rounded,
-                          color: colorScheme.onPrimaryContainer,
-                        ),
-                        iconSize: 24,
-                      ),
-                    ),
-                  ),
-                ),
-                onTap: () {}, // required for ripple effect
+                trailing: _themeDropdown(themeProvider, colorScheme),
+                onTap: () {},
               ),
               _SettingsItem(
                 icon: Icons.format_color_fill_rounded,
                 label: "Use Dynamic Colour",
                 trailing: Switch(
-                  value: themeProvider.useDynamicColor,
-                  onChanged: switchEnabled
+                  value: dynamicColorEnabled,
+                  onChanged: supportsDynamicColor
                       ? (value) => themeProvider.setUseDynamicColor(value)
-                      : null, // disables switch if not enabled
-                  activeColor: switchEnabled
+                      : null,
+                  activeColor: supportsDynamicColor
                       ? null
-                      : colorScheme.onSurface.withOpacity(0.38), // greyed out
+                      : colorScheme.onSurface.withOpacity(0.38),
                 ),
-                onTap: () {}, // still needed for ripple
+                onTap: () {},
               ),
+              if (!dynamicColorEnabled)
+                _SettingsItem(
+                  icon: Icons.color_lens_rounded,
+                  label: "Color Scheme",
+                  trailing: _schemeDropdown(themeProvider, colorScheme),
+                  onTap: () {},
+                ),
             ],
           ),
           _SettingsGroup(
@@ -261,7 +207,8 @@ class SettingsPage extends StatelessWidget {
                                       item.trailing!
                                     else
                                       Icon(Icons.chevron_right,
-                                          color: colorScheme.onSurfaceVariant),
+                                          color:
+                                          colorScheme.onSurfaceVariant),
                                   ],
                                 ),
                               ),
@@ -279,28 +226,137 @@ class SettingsPage extends StatelessWidget {
       },
     );
   }
+
+  Widget _themeDropdown(ThemeProvider provider, ColorScheme colorScheme) {
+    return SizedBox(
+      width: dropdownWidth,
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton2<ThemeMode>(
+          isExpanded: true,
+          value: provider.themeMode,
+          onChanged: (ThemeMode? mode) {
+            if (mode != null) provider.setTheme(mode);
+          },
+          items: const [
+            DropdownMenuItem(value: ThemeMode.system, child: Text("System")),
+            DropdownMenuItem(value: ThemeMode.light, child: Text("Light")),
+            DropdownMenuItem(value: ThemeMode.dark, child: Text("Dark")),
+          ],
+          buttonStyleData: ButtonStyleData(
+            height: 40,
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: colorScheme.outline),
+              color: colorScheme.primaryContainer,
+            ),
+            elevation: 0,
+          ),
+          dropdownStyleData: DropdownStyleData(
+            maxHeight: 160,
+            width: dropdownWidth,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(14),
+              color: colorScheme.surface,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 8,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            elevation: 8,
+            scrollbarTheme: ScrollbarThemeData(
+              radius: const Radius.circular(8),
+              thickness: MaterialStateProperty.all(6),
+              thumbVisibility: MaterialStateProperty.all(true),
+            ),
+          ),
+          iconStyleData: IconStyleData(
+            icon: Icon(Icons.keyboard_arrow_down_rounded,
+                color: colorScheme.onPrimaryContainer),
+            iconSize: 24,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _schemeDropdown(ThemeProvider provider, ColorScheme colorScheme) {
+    return SizedBox(
+      width: dropdownWidth,
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton2<String>(
+          isExpanded: true,
+          value: provider.selectedSchemeKey,
+          onChanged: (String? key) {
+            if (key != null) provider.setPredefinedColorScheme(key);
+          },
+          items: predefinedThemes.entries.map((entry) {
+            return DropdownMenuItem(
+              value: entry.key,
+              child: Text(entry.key),
+            );
+          }).toList(),
+          buttonStyleData: ButtonStyleData(
+            height: 40,
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: colorScheme.outline),
+              color: colorScheme.primaryContainer,
+            ),
+            elevation: 0,
+          ),
+          dropdownStyleData: DropdownStyleData(
+            maxHeight: 200,
+            width: dropdownWidth,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(14),
+              color: colorScheme.surface,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 8,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            scrollbarTheme: ScrollbarThemeData(
+              radius: const Radius.circular(8),
+              thickness: MaterialStateProperty.all(6),
+              thumbVisibility: MaterialStateProperty.all(true),
+            ),
+          ),
+          iconStyleData: IconStyleData(
+            icon: Icon(Icons.keyboard_arrow_down_rounded,
+                color: colorScheme.onPrimaryContainer),
+            iconSize: 24,
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class _SettingsGroup {
   final String title;
   final List<_SettingsItem> items;
 
-  _SettingsGroup({
-    required this.title,
-    required this.items,
-  });
+  _SettingsGroup({required this.title, required this.items});
 }
 
 class _SettingsItem {
   final IconData icon;
   final String label;
   final Widget? trailing;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
 
   _SettingsItem({
     required this.icon,
     required this.label,
-    required this.onTap,
     this.trailing,
+    this.onTap,
   });
 }

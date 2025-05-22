@@ -16,7 +16,7 @@ class _WebSettingsPageState extends State<WebSettingsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Appearance")),
+      appBar: AppBar(title: const Text("HarmonyCore Appearance")),
       body: InAppWebView(
         initialUrlRequest: URLRequest(url: WebUri(url)),
         initialSettings: InAppWebViewSettings(
