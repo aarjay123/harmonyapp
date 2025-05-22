@@ -36,7 +36,7 @@ class UpdatesPage extends StatelessWidget {
           ),
           _UpdatesItem(
             icon: Icons.info,
-            label: "This version: 3.0.0",
+            label: "This version: 3.1.1",
             subtitle: null,
             onTap: () {}, // no action, but needed for InkWell
           ),
