@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart'; // State management
 import 'package:dynamic_color/dynamic_color.dart'; // For Material You dynamic colors (Android 12+)
 import 'package:flutter_inappwebview/flutter_inappwebview.dart'; // For embedding web content
+import 'package:intl/intl.dart'; // For date formatting in native_welcome_page
 
 // Import your own app files for theming, helpers, and UI components
 import 'theme_provider.dart'; // Custom ThemeProvider managing theme state and preferences
@@ -13,6 +14,7 @@ import 'colour_scheme.dart'; // Defines your app's color schemes
 import 'device_info_helper.dart'; // Helper for checking device capabilities like dynamic color support
 import 'fullscreen_menu_page.dart'; // Fullscreen menu page for app navigation
 import 'global_slide_transition_builder.dart'; // Custom page transitions
+import 'native_welcome_page.dart'; // Import the new native welcome page
 
 // For platform-specific imports (e.g. non-web platforms)
 import 'dart:io' show Platform;
@@ -195,11 +197,11 @@ class ResponsiveScaffold extends StatefulWidget {
 class _ResponsiveScaffoldState extends State<ResponsiveScaffold> {
   int _selectedIndex = 0; // Tracks currently selected navigation index
   InAppWebViewController? _webViewController; // Controller for controlling the embedded webview
-  bool _isLoading = true; // Tracks loading state of the web content
+  bool _isLoading = true; // Tracks loading state of the web content (for webview pages)
 
-  // List of URLs to load in the webview for each tab
-  final List<String> _urls = [
-    'https://thehighlandcafe.github.io/hioswebcore/welcome.html',
+  // List of URLs to load in the webview for each tab (index 0 is now native)
+  final List<String?> _urls = [
+    null, // Index 0 for NativeWelcomePage, no URL needed
     'https://thehighlandcafe.github.io/hioswebcore/restaurant.html',
     'https://thehighlandcafe.github.io/hioswebcore/hotelactivities.html',
     'https://thehighlandcafe.github.io/hioswebcore/roomkey.html',
@@ -217,21 +219,28 @@ class _ResponsiveScaffoldState extends State<ResponsiveScaffold> {
   void _onItemTapped(int index) {
     setState(() {
       _selectedIndex = index;
-      _isLoading = true; // Show loading spinner while new page loads
-    });
-    // Load the new URL in the webview
-    _webViewController?.loadUrl(
-      urlRequest: URLRequest(url: WebUri(_urls[index])),
-    );
-
-    // Timeout fallback: stop loading spinner after 10 seconds max even if page hangs
-    Future.delayed(const Duration(seconds: 10), () {
-      if (mounted && _isLoading) {
-        setState(() {
-          _isLoading = false;
-        });
+      if (_urls[index] != null) { // Only set loading for webview pages
+        _isLoading = true;
+      } else {
+        _isLoading = false; // Native page doesn't have this webview loading state
       }
     });
+
+    if (_urls[index] != null) {
+      // Load the new URL in the webview
+      _webViewController?.loadUrl(
+        urlRequest: URLRequest(url: WebUri(_urls[index]!)),
+      );
+
+      // Timeout fallback: stop loading spinner after 10 seconds max even if page hangs
+      Future.delayed(const Duration(seconds: 10), () {
+        if (mounted && _isLoading && _urls[_selectedIndex] != null) {
+          setState(() {
+            _isLoading = false;
+          });
+        }
+      });
+    }
   }
 
   // Show a dialog informing the user that internet connection is missing
@@ -252,6 +261,68 @@ class _ResponsiveScaffoldState extends State<ResponsiveScaffold> {
       ),
     );
   }
+
+  Widget _buildCurrentPage() {
+    if (_selectedIndex == 0) {
+      return const NativeWelcomePage();
+    }
+    // For other indices, return the InAppWebView
+    if (_urls[_selectedIndex] == null) {
+      // Should not happen if logic is correct, but as a fallback:
+      return const Center(child: Text("Content not available."));
+    }
+    return Stack(
+      children: [
+        InAppWebView(
+          key: ValueKey(_urls[_selectedIndex]), // Use URL as key to force reload
+          initialUrlRequest:
+          URLRequest(url: WebUri(_urls[_selectedIndex]!)),
+          initialOptions: InAppWebViewGroupOptions(
+            crossPlatform:
+            InAppWebViewOptions(javaScriptEnabled: true), // Enable JS
+          ),
+          onWebViewCreated: (controller) {
+            _webViewController = controller; // Save controller for future URL loads
+            if (_selectedIndex != 0) { // Ensure we only set loading for webview pages
+              setState(() => _isLoading = true);
+            }
+          },
+          onLoadStart: (controller, url) {
+            debugPrint('WebView load started: $url');
+            if (_selectedIndex != 0) {
+              setState(() => _isLoading = true);
+            }
+          },
+          onLoadStop: (controller, url) {
+            debugPrint('WebView load stopped: $url');
+            if (_selectedIndex != 0) {
+              setState(() => _isLoading = false);
+            }
+          },
+          onLoadError: (controller, url, code, message) {
+            debugPrint('WebView load error $code: $message for $url');
+            if (_selectedIndex != 0) {
+              setState(() => _isLoading = false);
+            }
+            // Only show dialog if the error is for the currently selected webview page
+            if (url.toString() == _urls[_selectedIndex]) {
+              _showNoInternetDialog();
+            }
+          },
+          onLoadHttpError:
+              (controller, url, statusCode, description) {
+            debugPrint('WebView HTTP error $statusCode: $description for $url');
+            if (_selectedIndex != 0) {
+              setState(() => _isLoading = false);
+            }
+          },
+        ),
+        if (_isLoading && _selectedIndex != 0) // Show loader only for webview pages
+          const Center(child: CircularProgressIndicator()),
+      ],
+    );
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -282,7 +353,6 @@ class _ResponsiveScaffoldState extends State<ResponsiveScaffold> {
               );
             },
           ),
-          // Removed dynamic color toggle switch here as requested
         ],
       ),
       body: Row(
@@ -290,51 +360,9 @@ class _ResponsiveScaffoldState extends State<ResponsiveScaffold> {
           // If wide screen, show NavigationRail on the side for navigation
           if (isWideScreen) _buildNavigationRail(isWideScreen),
 
-          // Main content: the webview loading selected URL
+          // Main content: either NativeWelcomePage or the webview
           Expanded(
-            child: Stack(
-              children: [
-                InAppWebView(
-                  initialUrlRequest:
-                  URLRequest(url: WebUri(_urls[_selectedIndex])),
-                  initialOptions: InAppWebViewGroupOptions(
-                    crossPlatform:
-                    InAppWebViewOptions(javaScriptEnabled: true), // Enable JS
-                  ),
-                  onWebViewCreated: (controller) {
-                    _webViewController = controller; // Save controller for future URL loads
-                  },
-                  onLoadStart: (controller, url) {
-                    debugPrint('WebView load started: $url');
-                    setState(() {
-                      _isLoading = true; // Show loading spinner
-                    });
-                  },
-                  onLoadStop: (controller, url) {
-                    debugPrint('WebView load stopped: $url');
-                    setState(() {
-                      _isLoading = false; // Hide loading spinner
-                    });
-                  },
-                  onLoadError: (controller, url, code, message) {
-                    debugPrint('WebView load error $code: $message');
-                    setState(() {
-                      _isLoading = false;
-                    });
-                    _showNoInternetDialog(); // Show dialog on loading failure
-                  },
-                  onLoadHttpError:
-                      (controller, url, statusCode, description) {
-                    debugPrint('WebView HTTP error $statusCode: $description');
-                    setState(() {
-                      _isLoading = false;
-                    });
-                    // Optional: handle HTTP errors differently here if needed
-                  },
-                ),
-                // Removed CircularProgressIndicator overlay here as requested
-              ],
-            ),
+            child: _buildCurrentPage(),
           ),
         ],
       ),

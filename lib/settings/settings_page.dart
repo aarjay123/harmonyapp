@@ -14,6 +14,7 @@ import 'web_settings_page.dart';
 import 'about_hioswebcore.dart';
 
 import '../device_info_helper.dart';
+import '../settings_ui_components.dart';
 
 class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key});
@@ -155,65 +156,24 @@ class SettingsPage extends StatelessWidget {
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      child: Text(
-                        group.title,
-                        style: theme.textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: colorScheme.onBackground,
-                        ),
-                      ),
-                    ),
+                    // Use the shared SettingsGroupTitle widget
+                    SettingsGroupTitle(title: group.title),
+                    // Items in the group
                     Column(
                       children: List.generate(group.items.length, (index) {
+                        final itemData = group.items[index];
                         final isFirst = index == 0;
                         final isLast = index == group.items.length - 1;
-                        final item = group.items[index];
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 1),
-                          child: Material(
-                            color: colorScheme.primaryContainer,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.vertical(
-                                top: isFirst
-                                    ? const Radius.circular(16)
-                                    : const Radius.circular(5),
-                                bottom: isLast
-                                    ? const Radius.circular(16)
-                                    : const Radius.circular(5),
-                              ),
-                            ),
-                            clipBehavior: Clip.antiAlias,
-                            child: InkWell(
-                              onTap: item.onTap,
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 16, vertical: 14),
-                                child: Row(
-                                  children: [
-                                    Icon(item.icon, color: colorScheme.primary),
-                                    const SizedBox(width: 16),
-                                    Expanded(
-                                      child: Text(
-                                        item.label,
-                                        style: theme.textTheme.titleMedium
-                                            ?.copyWith(
-                                          color: colorScheme.onPrimaryContainer,
-                                        ),
-                                      ),
-                                    ),
-                                    if (item.trailing != null)
-                                      item.trailing!
-                                    else
-                                      Icon(Icons.chevron_right,
-                                          color:
-                                          colorScheme.onSurfaceVariant),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
+
+                        // Use the shared SettingsListItem widget
+                        return SettingsListItem(
+                          icon: itemData.icon,
+                          label: itemData.label,
+                          // subtitle: itemData.subtitle, // Uncomment if your _SettingsItem has subtitles
+                          trailing: itemData.trailing,
+                          onTap: itemData.onTap,
+                          isFirstItem: isFirst,
+                          isLastItem: isLast,
                         );
                       }),
                     ),
