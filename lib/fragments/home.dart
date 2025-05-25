@@ -46,7 +46,10 @@ class WeatherData {
 }
 
 class NativeWelcomePage extends StatefulWidget {
-  const NativeWelcomePage({super.key});
+  // Add a callback function for navigation
+  final Function(int) onNavigateToTab;
+
+  const NativeWelcomePage({super.key, required this.onNavigateToTab});
 
   @override
   State<NativeWelcomePage> createState() => _NativeWelcomePageState();
@@ -84,7 +87,7 @@ class _NativeWelcomePageState extends State<NativeWelcomePage> {
     } else {
       _greeting = 'Good Evening';
     }
-    _formattedDate = DateFormat('EEEE, d MMMM yyyy').format(now);
+    _formattedDate = DateFormat('EEEE, d MMMM yyyy').format(now); // Corrected
   }
 
   Future<Position?> _determinePosition() async {
@@ -139,15 +142,12 @@ class _NativeWelcomePageState extends State<NativeWelcomePage> {
 
   Future<void> _fetchWeatherForCoordinates(double lat, double lon, {bool isFallback = false}) async {
     if (!mounted) return;
-    // Ensure loading state is true if we are calling this directly or as a fallback
-    if (isFallback || _weatherData == null) { // Also set loading if no data yet
+    if (isFallback || _weatherData == null) {
       setState(() {
         _isLoadingWeather = true;
-        // Clear previous API error if this is a new attempt, keep location error if it's a fallback
         if (!isFallback) _weatherError = null;
       });
     }
-
 
     final uri = Uri.parse('https://api.openweathermap.org/data/2.5/weather?lat=$lat&lon=$lon&appid=$_apiKey');
     debugPrint("Fetching weather from: $uri (Fallback: $isFallback)");
@@ -161,11 +161,8 @@ class _NativeWelcomePageState extends State<NativeWelcomePage> {
         setState(() {
           _weatherData = WeatherData.fromJson(decodedJson, isFallback: isFallback);
           _isLoadingWeather = false;
-          if (isFallback && _weatherError == null) { // Clear generic location error if fallback succeeds
-            _weatherError = null; // Or set a specific message: "Showing fallback weather for Carnforth."
-          } else if (isFallback && _weatherError != null && _weatherError!.contains("Location")) {
-            // If a location error was set, and fallback worked, we might want to indicate it.
-            // For now, success means _weatherData is set, and error is cleared or not set by API.
+          if (isFallback && (_weatherError == null || !_weatherError!.toLowerCase().contains("location"))) {
+            _weatherError = null;
           }
         });
       } else {
@@ -191,7 +188,7 @@ class _NativeWelcomePageState extends State<NativeWelcomePage> {
     if (!mounted) return;
     setState(() {
       _isLoadingWeather = true;
-      _weatherError = null; // Clear previous errors on new attempt
+      _weatherError = null;
     });
 
     if (_apiKey == 'YOUR_OPENWEATHERMAP_API_KEY' || _apiKey.isEmpty) {
@@ -207,14 +204,9 @@ class _NativeWelcomePageState extends State<NativeWelcomePage> {
     Position? position = await _determinePosition();
 
     if (position != null) {
-      // Got user's position, fetch weather for it
       await _fetchWeatherForCoordinates(position.latitude, position.longitude);
     } else {
-      // Failed to get user's position, _weatherError should already be set by _determinePosition
-      // Now fetch for fallback location
       debugPrint("Fetching fallback weather for Carnforth, UK.");
-      // The _weatherError might already be set to a location specific issue.
-      // We can choose to show that error, or overwrite if fallback fails.
       await _fetchWeatherForCoordinates(_carnforthLat, _carnforthLon, isFallback: true);
     }
   }
@@ -243,7 +235,7 @@ class _NativeWelcomePageState extends State<NativeWelcomePage> {
       );
     }
 
-    if (_weatherError != null && _weatherData == null) { // Show error only if no weather data is available (even fallback)
+    if (_weatherError != null && _weatherData == null) {
       return Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
@@ -262,7 +254,7 @@ class _NativeWelcomePageState extends State<NativeWelcomePage> {
             iconSize: 20,
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints(),
-            onPressed: _fetchWeatherData, // This will retry getting current location first
+            onPressed: _fetchWeatherData,
             tooltip: 'Retry',
           )
         ],
@@ -271,15 +263,11 @@ class _NativeWelcomePageState extends State<NativeWelcomePage> {
 
     if (_weatherData != null) {
       String weatherLocationName = _weatherData!.cityName;
-      if (_weatherData!.isFallback && (_weatherError != null && _weatherError!.toLowerCase().contains("location"))) {
-        // If it's fallback due to location error, keep the error message visible or modify it.
-        // For now, we just show the fallback city name. User will see the initial location error.
-      }
 
-      return Column( // Allow error message and weather data to coexist if needed
+      return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (_weatherError != null && _weatherData!.isFallback) // Show location error message if fallback is active
+          if (_weatherError != null && _weatherData!.isFallback)
             Padding(
               padding: const EdgeInsets.only(bottom: 8.0),
               child: Row(
@@ -288,7 +276,7 @@ class _NativeWelcomePageState extends State<NativeWelcomePage> {
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      _weatherError!, // Show the original location error
+                      _weatherError!,
                       style: theme.textTheme.bodySmall?.copyWith(color: colorScheme.onSecondaryContainer.withOpacity(0.7)),
                     ),
                   ),
@@ -357,12 +345,32 @@ class _NativeWelcomePageState extends State<NativeWelcomePage> {
         ],
       );
     }
-    // Fallback if no data and no specific error message set by logic above
     return Text(
-      'Weather data processing...', // Should be brief if seen
+      'Weather data processing...',
       style: theme.textTheme.bodyLarge?.copyWith(
         color: colorScheme.onSecondaryContainer.withOpacity(0.7),
       ),
+    );
+  }
+
+  Widget _buildActionChip({
+    required BuildContext context,
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    return ActionChip(
+      avatar: Icon(icon, size: 20, color: colorScheme.primary),
+      label: Text(label),
+      onPressed: onTap,
+      labelStyle: theme.textTheme.labelLarge?.copyWith(color: colorScheme.onPrimaryContainer),
+      backgroundColor: colorScheme.primaryContainer.withOpacity(0.7),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8.0),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
     );
   }
 
@@ -377,6 +385,24 @@ class _NativeWelcomePageState extends State<NativeWelcomePage> {
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
     ).createShader(const Rect.fromLTWH(0.0, 0.0, 300.0, 100.0));
+
+    // Quick Actions data, with updated onTap callbacks
+    final List<Map<String, dynamic>> quickActions = [
+      {
+        'icon': Icons.restaurant_menu_rounded,
+        'label': 'Order Food',
+        'onTap': () {
+          widget.onNavigateToTab(1); // Navigate to Food tab (index 1)
+        },
+      },
+      {
+        'icon': Icons.hotel_rounded,
+        'label': 'Book Stay',
+        'onTap': () {
+          widget.onNavigateToTab(2); // Navigate to Hotel tab (index 2)
+        },
+      },
+    ];
 
     return Scaffold(
       backgroundColor: colorScheme.surface,
@@ -412,13 +438,13 @@ class _NativeWelcomePageState extends State<NativeWelcomePage> {
                   ],
                 ),
               ),
-              Card(
+              Material(
                 elevation: 0.0,
                 shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16.0),
-                    side: BorderSide(color: colorScheme.outlineVariant.withOpacity(0.5))
+                  borderRadius: BorderRadius.circular(16.0),
                 ),
                 color: colorScheme.secondaryContainer,
+                clipBehavior: Clip.antiAlias,
                 child: Padding(
                   padding: const EdgeInsets.all(20.0),
                   child: Column(
@@ -460,41 +486,6 @@ class _NativeWelcomePageState extends State<NativeWelcomePage> {
                   ),
                 ),
               ),
-              const SizedBox(height: 24.0),
-              Text(
-                'Quick Actions',
-                style: theme.textTheme.titleMedium?.copyWith(
-                  color: colorScheme.onSurfaceVariant,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const SizedBox(height: 12.0),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: _buildActionChip(
-                      context: context,
-                      icon: Icons.restaurant_menu_rounded,
-                      label: 'Order Food',
-                      onTap: () {
-                        // TODO: Implement action
-                      },
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _buildActionChip(
-                      context: context,
-                      icon: Icons.hotel_rounded,
-                      label: 'Book Stay',
-                      onTap: () {
-                        // TODO: Implement action
-                      },
-                    ),
-                  ),
-                ],
-              ),
             ],
           ),
         ),
@@ -515,7 +506,7 @@ class _NativeWelcomePageState extends State<NativeWelcomePage> {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Icon(icon, color: iconColor ?? colorScheme.primary, size: 28),
+        Icon(icon, color: iconColor ?? colorScheme.onSecondaryContainer, size: 28),
         const SizedBox(width: 16),
         Expanded(
           child: Column(
@@ -525,7 +516,7 @@ class _NativeWelcomePageState extends State<NativeWelcomePage> {
               Text(
                 title,
                 style: theme.textTheme.titleMedium?.copyWith(
-                  color: titleColor ?? colorScheme.onSurfaceVariant,
+                  color: titleColor ?? colorScheme.onSecondaryContainer,
                   fontWeight: FontWeight.w500,
                 ),
               ),
@@ -535,28 +526,6 @@ class _NativeWelcomePageState extends State<NativeWelcomePage> {
           ),
         ),
       ],
-    );
-  }
-
-  Widget _buildActionChip({
-    required BuildContext context,
-    required IconData icon,
-    required String label,
-    required VoidCallback onTap,
-  }) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-    return ActionChip(
-      avatar: Icon(icon, size: 20, color: colorScheme.primary),
-      label: Text(label),
-      onPressed: onTap,
-      labelStyle: theme.textTheme.labelLarge?.copyWith(color: colorScheme.onPrimaryContainer),
-      backgroundColor: colorScheme.primaryContainer.withOpacity(0.7),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8.0),
-        // side: BorderSide(color: colorScheme.outline.withOpacity(0.7)),
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
     );
   }
 }
