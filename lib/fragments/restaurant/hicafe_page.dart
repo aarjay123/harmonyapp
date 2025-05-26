@@ -74,17 +74,14 @@ class _HiCafePageState extends State<HiCafePage> with TickerProviderStateMixin {
     final colorScheme = theme.colorScheme;
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16.0), // Consistent padding for the scrollable area
-      child: Center( // Center the constrained content
+      padding: const EdgeInsets.all(16.0),
+      child: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: _contentMaxWidth),
-          // Removed inner horizontal Padding, as it's now handled by SingleChildScrollView
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Header section - no card background
               Padding(
-                // Adjusted padding to rely on outer padding for main horizontal spacing
                 padding: const EdgeInsets.only(bottom: 16.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -99,14 +96,13 @@ class _HiCafePageState extends State<HiCafePage> with TickerProviderStateMixin {
                     if (subtitle.isNotEmpty) ...[
                       const SizedBox(height: 8),
                       Padding(
-                        padding: const EdgeInsets.only(left: 40.0), // Keep for subtitle alignment
+                        padding: const EdgeInsets.only(left: 40.0),
                         child: Text(subtitle, style: theme.textTheme.bodyMedium?.copyWith(color: colorScheme.onSurfaceVariant)),
                       )
                     ]
                   ],
                 ),
               ),
-              // Card for the button and webview
               Card(
                 elevation: 0,
                 color: colorScheme.secondaryContainer,
@@ -165,11 +161,10 @@ class _HiCafePageState extends State<HiCafePage> with TickerProviderStateMixin {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16.0), // Consistent padding for the scrollable area
+      padding: const EdgeInsets.all(16.0),
       child: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: _contentMaxWidth),
-          // Removed inner horizontal Padding
           child: Card(
             elevation: 0,
             color: colorScheme.secondaryContainer,
@@ -243,24 +238,29 @@ class _HiCafePageState extends State<HiCafePage> with TickerProviderStateMixin {
           Material(
             color: colorScheme.surface,
             elevation: 0,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 8.0),
-              child: TabBar(
-                controller: _mainTabController,
-                labelColor: colorScheme.onSecondaryContainer,
-                unselectedLabelColor: colorScheme.onSurfaceVariant,
-                indicatorSize: TabBarIndicatorSize.tab,
-                indicator: BoxDecoration(
-                  borderRadius: BorderRadius.circular(24.0),
-                  color: colorScheme.secondaryContainer,
+            child: Center( // Center the TabBar
+              child: ConstrainedBox( // Constrain its width
+                constraints: const BoxConstraints(maxWidth: _contentMaxWidth),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 8.0),
+                  child: TabBar(
+                    controller: _mainTabController,
+                    labelColor: colorScheme.onSecondaryContainer,
+                    unselectedLabelColor: colorScheme.onSurfaceVariant,
+                    indicatorSize: TabBarIndicatorSize.tab,
+                    indicator: BoxDecoration(
+                      borderRadius: BorderRadius.circular(24.0),
+                      color: colorScheme.secondaryContainer,
+                    ),
+                    splashBorderRadius: BorderRadius.circular(24.0),
+                    dividerHeight: 0.0,
+                    tabs: const [
+                      Tab(text: 'Book'),
+                      Tab(text: 'Menus'),
+                      Tab(text: 'Order'),
+                    ],
+                  ),
                 ),
-                splashBorderRadius: BorderRadius.circular(24.0),
-                dividerHeight: 0.0,
-                tabs: const [
-                  Tab(text: 'Book'),
-                  Tab(text: 'Menus'),
-                  Tab(text: 'Order'),
-                ],
               ),
             ),
           ),
@@ -280,27 +280,32 @@ class _HiCafePageState extends State<HiCafePage> with TickerProviderStateMixin {
                     Material(
                       color: colorScheme.surface,
                       elevation: 0,
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 8.0),
-                        child: TabBar(
-                          controller: _menusTabController,
-                          tabAlignment: TabAlignment.fill,
-                          labelColor: colorScheme.onTertiaryContainer,
-                          unselectedLabelColor: colorScheme.onSurfaceVariant,
-                          indicatorSize: TabBarIndicatorSize.tab,
-                          indicator: BoxDecoration(
-                            borderRadius: BorderRadius.circular(28.0),
-                            color: colorScheme.tertiaryContainer,
+                      child: Center( // Center the nested TabBar
+                        child: ConstrainedBox( // Constrain its width
+                          constraints: const BoxConstraints(maxWidth: _contentMaxWidth),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 8.0),
+                            child: TabBar(
+                              controller: _menusTabController,
+                              tabAlignment: TabAlignment.fill, // Keep fill for even distribution within constrained width
+                              labelColor: colorScheme.onTertiaryContainer,
+                              unselectedLabelColor: colorScheme.onSurfaceVariant,
+                              indicatorSize: TabBarIndicatorSize.tab,
+                              indicator: BoxDecoration(
+                                borderRadius: BorderRadius.circular(28.0),
+                                color: colorScheme.tertiaryContainer,
+                              ),
+                              splashBorderRadius: BorderRadius.circular(28.0),
+                              dividerHeight: 0.0,
+                              labelPadding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 6.0),
+                              labelStyle: theme.textTheme.labelLarge?.copyWith(fontSize: 13),
+                              tabs: _menuUrls.keys.map((String key) {
+                                return Tab(
+                                  child: Text(key),
+                                );
+                              }).toList(),
+                            ),
                           ),
-                          splashBorderRadius: BorderRadius.circular(28.0),
-                          dividerHeight: 0.0,
-                          labelPadding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 6.0),
-                          labelStyle: theme.textTheme.labelLarge?.copyWith(fontSize: 13),
-                          tabs: _menuUrls.keys.map((String key) {
-                            return Tab(
-                              child: Text(key),
-                            );
-                          }).toList(),
                         ),
                       ),
                     ),

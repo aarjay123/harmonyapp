@@ -128,14 +128,6 @@ class _SettingsPageState extends State<SettingsPage> {
             title: "About",
             items: [
               _SettingsItem(
-                icon: Icons.info_rounded,
-                label: "About HarmonyCore",
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const AboutHioswebcore()),
-                ),
-              ),
-              _SettingsItem(
                 icon: Icons.perm_device_info_rounded,
                 label: "About App",
                 onTap: () => showAboutDialog(

@@ -11,6 +11,9 @@ import 'restaurant/locations_page.dart';
 class RestaurantPage extends StatelessWidget {
   const RestaurantPage({super.key});
 
+  // Define a max width for desktop-like content presentation
+  static const double _contentMaxWidth = 768.0;
+
   // Helper function to create styled list items similar to the buttons
   Widget _buildRestaurantOption({
     required BuildContext context,
@@ -72,14 +75,6 @@ class RestaurantPage extends StatelessWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
-    // Gradient for the main title (similar to welcome page) - REMOVED as per request
-    // final Shader titleGradientShader = LinearGradient(
-    //   colors: <Color>[colorScheme.primary, colorScheme.tertiary], // You can adjust these colors
-    //   begin: Alignment.topLeft,
-    //   end: Alignment.bottomRight,
-    // ).createShader(const Rect.fromLTWH(0.0, 0.0, 200.0, 70.0)); // Adjust rect size as needed
-
-
     final List<Map<String, dynamic>> restaurantActions = [
       {
         'icon': Icons.local_cafe_rounded,
@@ -106,70 +101,78 @@ class RestaurantPage extends StatelessWidget {
     return Scaffold(
       backgroundColor: colorScheme.surface, // Consistent background
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Header Section - styled like welcome page
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 24.0),
+        padding: const EdgeInsets.symmetric(vertical: 16.0), // Apply vertical padding to scroll view
+        child: Center( // Center the constrained content
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: _contentMaxWidth),
+            child: Padding( // Apply horizontal padding after constraining width
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.center, // Align icon and text vertically
-                    children: [
-                      Icon(
-                        Icons.restaurant_rounded,
-                        size: 36, // Slightly larger icon for displaySmall
-                        color: colorScheme.primary, // Icon color set to primary
-                      ),
-                      const SizedBox(width: 12),
-                      Text(
-                        'Food', // Main title
-                        style: theme.textTheme.displaySmall?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: colorScheme.primary, // Title color set to primary
+                  // Header Section - styled like welcome page
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 24.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.center, // Align icon and text vertically
+                          children: [
+                            Icon(
+                              Icons.restaurant_rounded,
+                              size: 36, // Slightly larger icon for displaySmall
+                              color: colorScheme.primary, // Icon color set to primary
+                            ),
+                            const SizedBox(width: 12),
+                            Text(
+                              'Food', // Main title
+                              style: theme.textTheme.displaySmall?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: colorScheme.primary, // Title color set to primary
+                              ),
+                            ),
+                          ],
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  // Subtitle alignment changed, and text style changed
-                  Text(
-                    'Pick an action from below.', // Subtitle
-                    style: theme.textTheme.bodyMedium?.copyWith( // Made subtitle smaller
-                      color: colorScheme.onSurfaceVariant,
+                        const SizedBox(height: 8),
+                        // Subtitle alignment changed, and text style changed
+                        Text(
+                          'Pick an action from below.', // Subtitle
+                          style: theme.textTheme.bodyMedium?.copyWith( // Made subtitle smaller
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
                     ),
+                  ),
+                  // const SizedBox(height: 20.0), // Original spacing before action items, adjust as needed
+
+                  // Action Items
+                  // The Container around this Column of options is not strictly needed
+                  // if there's no specific background or decoration for the group itself.
+                  // The _buildRestaurantOption handles its own background.
+                  Column(
+                    children: List.generate(restaurantActions.length, (index) {
+                      final action = restaurantActions[index];
+                      return _buildRestaurantOption(
+                        context: context,
+                        icon: action['icon'] as IconData,
+                        label: action['label'] as String,
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => action['page'] as Widget),
+                          );
+                        },
+                        isFirst: index == 0,
+                        isLast: index == restaurantActions.length - 1,
+                      );
+                    }),
                   ),
                 ],
               ),
             ),
-            // const SizedBox(height: 20.0), // Original spacing before action items, adjust as needed
-
-            // Action Items
-            Container(
-              // Removed card background from here, items are now styled individually
-              child: Column(
-                children: List.generate(restaurantActions.length, (index) {
-                  final action = restaurantActions[index];
-                  return _buildRestaurantOption(
-                    context: context,
-                    icon: action['icon'] as IconData,
-                    label: action['label'] as String,
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => action['page'] as Widget),
-                      );
-                    },
-                    isFirst: index == 0,
-                    isLast: index == restaurantActions.length - 1,
-                  );
-                }),
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );
