@@ -86,7 +86,7 @@ class FullscreenMenuPage extends StatelessWidget {
     final colorScheme = theme.colorScheme;
 
     return Material(
-      color: colorScheme.primaryContainer,
+      color: colorScheme.secondaryContainer,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(
           top: isFirst ? const Radius.circular(16) : Radius.circular(5),
@@ -123,7 +123,7 @@ class FullscreenMenuPage extends StatelessWidget {
                 child: Text(
                   item.label,
                   style: theme.textTheme.titleMedium?.copyWith(
-                    color: colorScheme.onPrimaryContainer,
+                    color: colorScheme.onSecondaryContainer,
                   ),
                 ),
               ),

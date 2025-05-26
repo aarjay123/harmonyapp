@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../settings_ui_components.dart';
+
 class SocialsPage extends StatelessWidget {
   const SocialsPage({super.key});
 
@@ -24,17 +26,17 @@ class SocialsPage extends StatelessWidget {
       _SocialsGroup(
         title: "The Highland Cafe™ Enterprises",
         items: [
-          _SocialItem(
+          _SocialsItem(
             icon: Icons.facebook_rounded,
             label: "Facebook",
             onTap: () => _launchExternalUrl(context, 'https://www.facebook.com/profile.php?id=100095224335357'),
           ),
-          _SocialItem(
+          _SocialsItem(
             icon: Icons.camera_alt_rounded,
             label: "Instagram",
-            onTap: () => _launchExternalUrl(context, 'https://www.instagram.com/thehighlandcafe/'),
+            onTap: () => _launchExternalUrl(context, 'https://instagram.com/thehighlandcafe'),
           ),
-          _SocialItem(
+          _SocialsItem(
             icon: Icons.forum_rounded,
             label: "Threads",
             onTap: () => _launchExternalUrl(context, 'https://www.threads.net/@thehighlandcafe'),
@@ -44,12 +46,12 @@ class SocialsPage extends StatelessWidget {
       _SocialsGroup(
         title: "HiDev",
         items: [
-          _SocialItem(
+          _SocialsItem(
             icon: Icons.facebook_rounded,
             label: "Facebook",
             onTap: () => _launchExternalUrl(context, 'https://www.facebook.com/profile.php?id=61558122144435'),
           ),
-          _SocialItem(
+          _SocialsItem(
             icon: Icons.camera_alt_rounded,
             label: "Instagram",
             onTap: () => _launchExternalUrl(context, 'https://www.instagram.com/nuggetdev/'),
@@ -59,9 +61,11 @@ class SocialsPage extends StatelessWidget {
     ];
 
     return Scaffold(
-      appBar: AppBar(title: const Text("Socials")),
+      appBar: AppBar(
+        title: const Text("Socials"),
+      ),
       body: Padding(
-        padding: const EdgeInsets.all(24.0),
+        padding: const EdgeInsets.all(24.0), // Consistent padding
         child: ListView.builder(
           itemCount: groups.length,
           itemBuilder: (context, groupIndex) {
@@ -69,52 +73,24 @@ class SocialsPage extends StatelessWidget {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  child: Text(
-                    group.title,
-                    style: theme.textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: colorScheme.onBackground,
-                    ),
-                  ),
-                ),
+                // Step 2: Use the shared SettingsGroupTitle widget
+                SettingsGroupTitle(title: group.title),
+                // Items in the group
                 Column(
-                  children: List.generate(group.items.length, (index) {
-                    final isFirst = index == 0;
-                    final isLast = index == group.items.length - 1;
-                    final item = group.items[index];
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 1),
-                      child: Material(
-                        color: colorScheme.primaryContainer,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.vertical(
-                            top: isFirst ? const Radius.circular(16) : const Radius.circular(5),
-                            bottom: isLast ? const Radius.circular(16) : const Radius.circular(5),
-                          ),
-                          //side: BorderSide(color: colorScheme.outline),
-                        ),
-                        clipBehavior: Clip.antiAlias,
-                        child: InkWell(
-                          onTap: item.onTap,
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                            child: Row(
-                              children: [
-                                Icon(item.icon, color: colorScheme.primary),
-                                const SizedBox(width: 16),
-                                Text(
-                                  item.label,
-                                  style: theme.textTheme.titleMedium?.copyWith(
-                                    color: colorScheme.onPrimaryContainer,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
+                  children: List.generate(group.items.length, (itemIndex) {
+                    final itemData = group.items[itemIndex]; // Renamed for clarity
+                    final isFirstItem = itemIndex == 0;
+                    final isLastItem = itemIndex == group.items.length - 1;
+
+                    // Step 3: Use the shared SettingsListItem widget and RETURN it
+                    return SettingsListItem(
+                      icon: itemData.icon,
+                      label: itemData.label,
+                      subtitle: itemData.subtitle,
+                      onTap: itemData.onTap,
+                      isFirstItem: isFirstItem,
+                      isLastItem: isLastItem,
+                      // No 'trailing' widget passed, so chevron will appear if onTap is not null
                     );
                   }),
                 ),
@@ -129,7 +105,7 @@ class SocialsPage extends StatelessWidget {
 
 class _SocialsGroup {
   final String title;
-  final List<_SocialItem> items;
+  final List<_SocialsItem> items;
 
   _SocialsGroup({
     required this.title,
@@ -137,14 +113,16 @@ class _SocialsGroup {
   });
 }
 
-class _SocialItem {
+class _SocialsItem {
   final IconData icon;
   final String label;
+  final String? subtitle;
   final VoidCallback onTap;
 
-  _SocialItem({
+  _SocialsItem({
     required this.icon,
     required this.label,
+    this.subtitle,
     required this.onTap,
   });
 }

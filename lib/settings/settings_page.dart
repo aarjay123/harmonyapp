@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:dropdown_button2/dropdown_button2.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 import '../theme_provider.dart';
 import '../app_colour_schemes.dart';
@@ -16,8 +17,28 @@ import 'about_hioswebcore.dart';
 import '../device_info_helper.dart';
 import '../settings_ui_components.dart';
 
-class SettingsPage extends StatelessWidget {
+class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
+
+  @override
+  State<SettingsPage> createState() => _SettingsPageState();
+}
+
+class _SettingsPageState extends State<SettingsPage> {
+  String _version = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadVersionInfo();
+  }
+
+  Future<void> _loadVersionInfo() async {
+    final info = await PackageInfo.fromPlatform();
+    setState(() {
+      _version = '${info.version}+${info.buildNumber}';
+    });
+  }
 
   static const double dropdownWidth = 200; // Common dropdown width
 
@@ -37,14 +58,6 @@ class SettingsPage extends StatelessWidget {
           _SettingsGroup(
             title: "Appearance",
             items: [
-              _SettingsItem(
-                icon: Icons.palette_rounded,
-                label: "Appearance Settings",
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const WebSettingsPage()),
-                ),
-              ),
               _SettingsItem(
                 icon: Icons.brightness_6_rounded,
                 label: "Theme",
@@ -128,7 +141,7 @@ class SettingsPage extends StatelessWidget {
                 onTap: () => showAboutDialog(
                   context: context,
                   applicationName: 'Harmony by The Highland Cafe',
-                  applicationVersion: '3.1.1',
+                  applicationVersion: '$_version',
                   applicationLegalese:
                   'Copyright © The Highland Cafe™ Ltd. 2025. All rights Reserved.',
                 ),

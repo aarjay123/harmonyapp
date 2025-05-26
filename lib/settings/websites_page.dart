@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../settings_ui_components.dart';
+
 class WebsitesPage extends StatelessWidget {
   const WebsitesPage({super.key});
 
@@ -53,9 +55,11 @@ class WebsitesPage extends StatelessWidget {
     ];
 
     return Scaffold(
-      appBar: AppBar(title: const Text("Websites")),
+      appBar: AppBar(
+        title: const Text("Websites"),
+      ),
       body: Padding(
-        padding: const EdgeInsets.all(24.0),
+        padding: const EdgeInsets.all(24.0), // Consistent padding
         child: ListView.builder(
           itemCount: groups.length,
           itemBuilder: (context, groupIndex) {
@@ -63,71 +67,24 @@ class WebsitesPage extends StatelessWidget {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  child: Text(
-                    group.title,
-                    style: theme.textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: colorScheme.onBackground,
-                    ),
-                  ),
-                ),
+                // Step 2: Use the shared SettingsGroupTitle widget
+                SettingsGroupTitle(title: group.title),
+                // Items in the group
                 Column(
-                  children: List.generate(group.items.length, (index) {
-                    final isFirst = index == 0;
-                    final isLast = index == group.items.length - 1;
-                    final item = group.items[index];
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 1),
-                      child: Material(
-                        color: colorScheme.primaryContainer,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.vertical(
-                            top: isFirst ? const Radius.circular(16) : const Radius.circular(5),
-                            bottom: isLast ? const Radius.circular(16) : const Radius.circular(5),
-                          ),
-                          //side: BorderSide(color: colorScheme.outline),
-                        ),
-                        clipBehavior: Clip.antiAlias,
-                        child: InkWell(
-                          onTap: item.onTap,
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                            child: Row(
-                              crossAxisAlignment: item.subtitle != null
-                                  ? CrossAxisAlignment.start
-                                  : CrossAxisAlignment.center,
-                              children: [
-                                Icon(item.icon, color: colorScheme.primary),
-                                const SizedBox(width: 16),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        item.label,
-                                        style: theme.textTheme.titleMedium?.copyWith(
-                                          color: colorScheme.onPrimaryContainer,
-                                        ),
-                                      ),
-                                      if (item.subtitle != null) ...[
-                                        const SizedBox(height: 6),
-                                        Text(
-                                          item.subtitle!,
-                                          style: theme.textTheme.bodyMedium?.copyWith(
-                                            color: colorScheme.onSurfaceVariant,
-                                          ),
-                                        ),
-                                      ],
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
+                  children: List.generate(group.items.length, (itemIndex) {
+                    final itemData = group.items[itemIndex]; // Renamed for clarity
+                    final isFirstItem = itemIndex == 0;
+                    final isLastItem = itemIndex == group.items.length - 1;
+
+                    // Step 3: Use the shared SettingsListItem widget and RETURN it
+                    return SettingsListItem(
+                      icon: itemData.icon,
+                      label: itemData.label,
+                      subtitle: itemData.subtitle,
+                      onTap: itemData.onTap,
+                      isFirstItem: isFirstItem,
+                      isLastItem: isLastItem,
+                      // No 'trailing' widget passed, so chevron will appear if onTap is not null
                     );
                   }),
                 ),
