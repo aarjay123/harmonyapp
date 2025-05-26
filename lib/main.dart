@@ -5,7 +5,9 @@ import 'package:flutter/material.dart';
 // Import third-party packages
 import 'package:provider/provider.dart'; // State management
 import 'package:dynamic_color/dynamic_color.dart'; // For Material You dynamic colors (Android 12+)
-import 'package:flutter_inappwebview/flutter_inappwebview.dart'; // For embedding web content
+// InAppWebView might still be used by FullscreenMenuPage or other sub-pages
+import 'package:flutter_inappwebview/flutter_inappwebview.dart';
+import 'package:intl/intl.dart'; // For date formatting in native_welcome_page
 
 // Import your own app files for theming, helpers, and UI components
 import 'theme_provider.dart'; // Custom ThemeProvider managing theme state and preferences
@@ -13,6 +15,11 @@ import 'colour_scheme.dart'; // Defines your app's color schemes
 import 'device_info_helper.dart'; // Helper for checking device capabilities like dynamic color support
 import 'fullscreen_menu_page.dart'; // Fullscreen menu page for app navigation
 import 'global_slide_transition_builder.dart'; // Custom page transitions
+
+import 'fragments/home.dart';
+import 'fragments/restaurant.dart';
+import 'fragments/hotel.dart';
+import 'fragments/roomkey.dart';
 
 // For platform-specific imports (e.g. non-web platforms)
 import 'dart:io' show Platform;
@@ -194,18 +201,7 @@ class ResponsiveScaffold extends StatefulWidget {
 
 class _ResponsiveScaffoldState extends State<ResponsiveScaffold> {
   int _selectedIndex = 0; // Tracks currently selected navigation index
-  InAppWebViewController? _webViewController; // Controller for controlling the embedded webview
-  bool _isLoading = true; // Tracks loading state of the web content
 
-  // List of URLs to load in the webview for each tab
-  final List<String> _urls = [
-    'https://thehighlandcafe.github.io/hioswebcore/welcome.html',
-    'https://thehighlandcafe.github.io/hioswebcore/restaurant.html',
-    'https://thehighlandcafe.github.io/hioswebcore/hotelactivities.html',
-    'https://thehighlandcafe.github.io/hioswebcore/roomkey.html',
-  ];
-
-  // Corresponding titles for each tab
   final List<String> _titles = [
     'Home',
     'Food',
@@ -213,29 +209,14 @@ class _ResponsiveScaffoldState extends State<ResponsiveScaffold> {
     'Room Key',
   ];
 
-  // Called when user taps a navigation destination
   void _onItemTapped(int index) {
     setState(() {
       _selectedIndex = index;
-      _isLoading = true; // Show loading spinner while new page loads
-    });
-    // Load the new URL in the webview
-    _webViewController?.loadUrl(
-      urlRequest: URLRequest(url: WebUri(_urls[index])),
-    );
-
-    // Timeout fallback: stop loading spinner after 10 seconds max even if page hangs
-    Future.delayed(const Duration(seconds: 10), () {
-      if (mounted && _isLoading) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
     });
   }
 
-  // Show a dialog informing the user that internet connection is missing
   void _showNoInternetDialog() {
+    if (!mounted) return;
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -245,7 +226,7 @@ class _ResponsiveScaffoldState extends State<ResponsiveScaffold> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(context).pop(), // Close dialog
+            onPressed: () => Navigator.of(context).pop(),
             child: const Text('OK'),
           )
         ],
@@ -253,9 +234,26 @@ class _ResponsiveScaffoldState extends State<ResponsiveScaffold> {
     );
   }
 
+  Widget _buildCurrentPage() {
+    switch (_selectedIndex) {
+      case 0:
+      // Pass the _onItemTapped callback to NativeWelcomePage
+      // Removed 'const' because _onItemTapped is not a compile-time constant
+        return NativeWelcomePage(onNavigateToTab: _onItemTapped);
+      case 1:
+        return const RestaurantPage();
+      case 2:
+        return const HotelPage();
+      case 3:
+        return const RoomKeyPage();
+      default:
+        return const Center(child: Text("Page not found."));
+    }
+  }
+
+
   @override
   Widget build(BuildContext context) {
-    // Determine if screen width is wide (e.g. tablet/desktop)
     final bool isWideScreen = MediaQuery.of(context).size.width >= 600;
 
     return Scaffold(
@@ -263,7 +261,6 @@ class _ResponsiveScaffoldState extends State<ResponsiveScaffold> {
         titleSpacing: 0,
         title: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16.0),
-          // Display title corresponding to selected tab
           child: Text(
             _titles[_selectedIndex],
             style: Theme.of(context).textTheme.titleLarge,
@@ -273,7 +270,6 @@ class _ResponsiveScaffoldState extends State<ResponsiveScaffold> {
           IconButton(
             icon: const Icon(Icons.menu_open_rounded),
             onPressed: () {
-              // Open fullscreen menu page when menu icon pressed
               Navigator.push(
                 context,
                 MaterialPageRoute(
@@ -282,75 +278,27 @@ class _ResponsiveScaffoldState extends State<ResponsiveScaffold> {
               );
             },
           ),
-          // Removed dynamic color toggle switch here as requested
         ],
       ),
       body: Row(
         children: [
-          // If wide screen, show NavigationRail on the side for navigation
           if (isWideScreen) _buildNavigationRail(isWideScreen),
-
-          // Main content: the webview loading selected URL
           Expanded(
-            child: Stack(
-              children: [
-                InAppWebView(
-                  initialUrlRequest:
-                  URLRequest(url: WebUri(_urls[_selectedIndex])),
-                  initialOptions: InAppWebViewGroupOptions(
-                    crossPlatform:
-                    InAppWebViewOptions(javaScriptEnabled: true), // Enable JS
-                  ),
-                  onWebViewCreated: (controller) {
-                    _webViewController = controller; // Save controller for future URL loads
-                  },
-                  onLoadStart: (controller, url) {
-                    debugPrint('WebView load started: $url');
-                    setState(() {
-                      _isLoading = true; // Show loading spinner
-                    });
-                  },
-                  onLoadStop: (controller, url) {
-                    debugPrint('WebView load stopped: $url');
-                    setState(() {
-                      _isLoading = false; // Hide loading spinner
-                    });
-                  },
-                  onLoadError: (controller, url, code, message) {
-                    debugPrint('WebView load error $code: $message');
-                    setState(() {
-                      _isLoading = false;
-                    });
-                    _showNoInternetDialog(); // Show dialog on loading failure
-                  },
-                  onLoadHttpError:
-                      (controller, url, statusCode, description) {
-                    debugPrint('WebView HTTP error $statusCode: $description');
-                    setState(() {
-                      _isLoading = false;
-                    });
-                    // Optional: handle HTTP errors differently here if needed
-                  },
-                ),
-                // Removed CircularProgressIndicator overlay here as requested
-              ],
-            ),
+            child: _buildCurrentPage(),
           ),
         ],
       ),
-      // For narrow screens show bottom navigation bar instead of NavigationRail
       bottomNavigationBar: isWideScreen ? null : _buildNavigationBar(),
     );
   }
 
-  // Build NavigationRail widget for wide screens
   NavigationRail _buildNavigationRail(bool isWideScreen) {
     return NavigationRail(
       selectedIndex: _selectedIndex,
-      onDestinationSelected: _onItemTapped, // Call handler when user selects destination
+      onDestinationSelected: _onItemTapped,
       labelType: isWideScreen
-          ? NavigationRailLabelType.all // Show labels on wide screens
-          : NavigationRailLabelType.none, // Hide labels on narrow screens (fallback)
+          ? NavigationRailLabelType.all
+          : NavigationRailLabelType.none,
       destinations: const [
         NavigationRailDestination(
             icon: Icon(Icons.home_rounded), label: Text('Home')),
@@ -364,23 +312,20 @@ class _ResponsiveScaffoldState extends State<ResponsiveScaffold> {
     );
   }
 
-  // Build bottom navigation bar widget for narrow screens
   Widget _buildNavigationBar() {
     return Theme(
       data: Theme.of(context).copyWith(
         navigationBarTheme: const NavigationBarThemeData(
           labelBehavior: NavigationDestinationLabelBehavior.alwaysHide,
-          // Always hide labels in bottom navigation for compactness
         ),
       ),
       child: NavigationBar(
         selectedIndex: _selectedIndex,
         onDestinationSelected: _onItemTapped,
-        height: 60, // Height of the navigation bar
+        height: 60,
         destinations: const [
           NavigationDestination(icon: Icon(Icons.home_rounded), label: 'Home'),
-          NavigationDestination(
-              icon: Icon(Icons.restaurant_rounded), label: 'Food'),
+          NavigationDestination(icon: Icon(Icons.restaurant_rounded), label: 'Food'),
           NavigationDestination(icon: Icon(Icons.hotel_rounded), label: 'Hotel'),
           NavigationDestination(icon: Icon(Icons.key_rounded), label: 'Room Key'),
         ],

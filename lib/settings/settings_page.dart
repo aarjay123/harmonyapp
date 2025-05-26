@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:dropdown_button2/dropdown_button2.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 import '../theme_provider.dart';
 import '../app_colour_schemes.dart';
@@ -14,9 +15,30 @@ import 'web_settings_page.dart';
 import 'about_hioswebcore.dart';
 
 import '../device_info_helper.dart';
+import '../settings_ui_components.dart';
 
-class SettingsPage extends StatelessWidget {
+class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
+
+  @override
+  State<SettingsPage> createState() => _SettingsPageState();
+}
+
+class _SettingsPageState extends State<SettingsPage> {
+  String _version = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadVersionInfo();
+  }
+
+  Future<void> _loadVersionInfo() async {
+    final info = await PackageInfo.fromPlatform();
+    setState(() {
+      _version = '${info.version}+${info.buildNumber}';
+    });
+  }
 
   static const double dropdownWidth = 200; // Common dropdown width
 
@@ -36,14 +58,6 @@ class SettingsPage extends StatelessWidget {
           _SettingsGroup(
             title: "Appearance",
             items: [
-              _SettingsItem(
-                icon: Icons.palette_rounded,
-                label: "Appearance Settings",
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const WebSettingsPage()),
-                ),
-              ),
               _SettingsItem(
                 icon: Icons.brightness_6_rounded,
                 label: "Theme",
@@ -114,20 +128,12 @@ class SettingsPage extends StatelessWidget {
             title: "About",
             items: [
               _SettingsItem(
-                icon: Icons.info_rounded,
-                label: "About HarmonyCore",
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const AboutHioswebcore()),
-                ),
-              ),
-              _SettingsItem(
                 icon: Icons.perm_device_info_rounded,
                 label: "About App",
                 onTap: () => showAboutDialog(
                   context: context,
                   applicationName: 'Harmony by The Highland Cafe',
-                  applicationVersion: '3.1.1',
+                  applicationVersion: '$_version',
                   applicationLegalese:
                   'Copyright © The Highland Cafe™ Ltd. 2025. All rights Reserved.',
                 ),
@@ -155,65 +161,24 @@ class SettingsPage extends StatelessWidget {
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      child: Text(
-                        group.title,
-                        style: theme.textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: colorScheme.onBackground,
-                        ),
-                      ),
-                    ),
+                    // Use the shared SettingsGroupTitle widget
+                    SettingsGroupTitle(title: group.title),
+                    // Items in the group
                     Column(
                       children: List.generate(group.items.length, (index) {
+                        final itemData = group.items[index];
                         final isFirst = index == 0;
                         final isLast = index == group.items.length - 1;
-                        final item = group.items[index];
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 1),
-                          child: Material(
-                            color: colorScheme.primaryContainer,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.vertical(
-                                top: isFirst
-                                    ? const Radius.circular(16)
-                                    : const Radius.circular(5),
-                                bottom: isLast
-                                    ? const Radius.circular(16)
-                                    : const Radius.circular(5),
-                              ),
-                            ),
-                            clipBehavior: Clip.antiAlias,
-                            child: InkWell(
-                              onTap: item.onTap,
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 16, vertical: 14),
-                                child: Row(
-                                  children: [
-                                    Icon(item.icon, color: colorScheme.primary),
-                                    const SizedBox(width: 16),
-                                    Expanded(
-                                      child: Text(
-                                        item.label,
-                                        style: theme.textTheme.titleMedium
-                                            ?.copyWith(
-                                          color: colorScheme.onPrimaryContainer,
-                                        ),
-                                      ),
-                                    ),
-                                    if (item.trailing != null)
-                                      item.trailing!
-                                    else
-                                      Icon(Icons.chevron_right,
-                                          color:
-                                          colorScheme.onSurfaceVariant),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
+
+                        // Use the shared SettingsListItem widget
+                        return SettingsListItem(
+                          icon: itemData.icon,
+                          label: itemData.label,
+                          // subtitle: itemData.subtitle, // Uncomment if your _SettingsItem has subtitles
+                          trailing: itemData.trailing,
+                          onTap: itemData.onTap,
+                          isFirstItem: isFirst,
+                          isLastItem: isLast,
                         );
                       }),
                     ),

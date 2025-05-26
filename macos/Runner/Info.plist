@@ -28,5 +28,9 @@
 	<string>MainMenu</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
+	<key>NSLocationUsageDescription</key>
+	<string>Harmony needs to access your location to provide local weather updates and enhance your experience.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+    <string>To provide local weather information, this app needs access to your location while you are using it.</string>
 </dict>
 </plist>
