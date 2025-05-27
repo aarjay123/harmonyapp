@@ -28,6 +28,8 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        //Placeholder for app name
+        manifestPlaceholders["app_name"] = "Harmony"
     }
 
     buildTypes {
@@ -35,6 +37,11 @@ android {
             // TODO: Add your own signing config for the release build.
             // Signing with the debug keys for now, so `flutter run --release` works.
             signingConfig = signingConfigs.getByName("debug")
+        }
+        debug {
+            applicationIdSuffix = ".debug"
+            manifestPlaceholders["app_name"] = "Harmony (Debug)"
+            versionNameSuffix = "-debug"
         }
     }
 }

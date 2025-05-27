@@ -43,7 +43,7 @@ class FullscreenMenuPage extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 18.0),
             child: Row(
               children: [
-                Icon(icon, color: colorScheme.onSecondaryContainer, size: 26),
+                Icon(icon, color: colorScheme.primary, size: 26),
                 const SizedBox(width: 16.0),
                 Expanded(
                   child: Text(
