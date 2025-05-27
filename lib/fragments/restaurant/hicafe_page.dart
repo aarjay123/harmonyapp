@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
+import 'package:flutter/gestures.dart'; // Import for GestureRecognizers
+import 'package:flutter/foundation.dart' show Factory;
 
 // A simple page to display a webview in fullscreen
 class FullscreenWebViewPage extends StatelessWidget {
@@ -133,7 +135,7 @@ class _HiCafePageState extends State<HiCafePage> with TickerProviderStateMixin {
                       ),
                       const SizedBox(height: 16),
                       SizedBox(
-                        height: 800,
+                        height: 600, // Adjusted height, ensure it's reasonable
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(16.0),
                           child: InAppWebView(
@@ -143,6 +145,11 @@ class _HiCafePageState extends State<HiCafePage> with TickerProviderStateMixin {
                               javaScriptEnabled: true,
                               transparentBackground: true,
                             ),
+                            // Add gesture recognizers to allow webview scrolling
+                            gestureRecognizers: Set()
+                              ..add(Factory<VerticalDragGestureRecognizer>(
+                                    () => VerticalDragGestureRecognizer(),
+                              )),
                           ),
                         ),
                       ),
@@ -201,7 +208,7 @@ class _HiCafePageState extends State<HiCafePage> with TickerProviderStateMixin {
                   ),
                   const SizedBox(height: 16),
                   SizedBox(
-                    height: 800,
+                    height: 600, // Adjusted height
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(16.0),
                       child: InAppWebView(
@@ -211,6 +218,11 @@ class _HiCafePageState extends State<HiCafePage> with TickerProviderStateMixin {
                           javaScriptEnabled: true,
                           transparentBackground: true,
                         ),
+                        // Add gesture recognizers to allow webview scrolling
+                        gestureRecognizers: Set()
+                          ..add(Factory<VerticalDragGestureRecognizer>(
+                                () => VerticalDragGestureRecognizer(),
+                          )),
                       ),
                     ),
                   ),
@@ -238,8 +250,8 @@ class _HiCafePageState extends State<HiCafePage> with TickerProviderStateMixin {
           Material(
             color: colorScheme.surface,
             elevation: 0,
-            child: Center( // Center the TabBar
-              child: ConstrainedBox( // Constrain its width
+            child: Center(
+              child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: _contentMaxWidth),
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 8.0),
@@ -280,14 +292,14 @@ class _HiCafePageState extends State<HiCafePage> with TickerProviderStateMixin {
                     Material(
                       color: colorScheme.surface,
                       elevation: 0,
-                      child: Center( // Center the nested TabBar
-                        child: ConstrainedBox( // Constrain its width
+                      child: Center(
+                        child: ConstrainedBox(
                           constraints: const BoxConstraints(maxWidth: _contentMaxWidth),
                           child: Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 8.0),
                             child: TabBar(
                               controller: _menusTabController,
-                              tabAlignment: TabAlignment.fill, // Keep fill for even distribution within constrained width
+                              tabAlignment: TabAlignment.fill,
                               labelColor: colorScheme.onTertiaryContainer,
                               unselectedLabelColor: colorScheme.onSurfaceVariant,
                               indicatorSize: TabBarIndicatorSize.tab,
