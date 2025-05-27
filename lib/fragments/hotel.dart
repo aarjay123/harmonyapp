@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
+import 'package:flutter/gestures.dart'; // Import for GestureRecognizers
+import 'package:flutter/foundation.dart' show Factory;
 
 // A simple page to display a webview in fullscreen
-// Included here for self-containment of the example.
-// In a real project, move this to a shared utility file.
 class FullscreenWebViewPage extends StatelessWidget {
   final String url;
   final String title;
@@ -44,7 +44,6 @@ class _HotelPageState extends State<HotelPage> with TickerProviderStateMixin {
   final String _checkOutFullscreenUrl = 'https://forms.office.com/Pages/ResponsePage.aspx?id=DQSIkWdsW0yxEjajBLZtrQAAAAAAAAAAAAYAABORJhBUMjdUUDRPMzg2OE9GOTRaQlNMUjJSUFdONS4u';
 
 
-  // Define a max width for desktop-like content presentation
   static const double _contentMaxWidth = 768.0;
 
   @override
@@ -59,16 +58,17 @@ class _HotelPageState extends State<HotelPage> with TickerProviderStateMixin {
     super.dispose();
   }
 
-  Widget _buildHotelContentSection({
-    required String sectionTitle,
-    required String sectionSubtitle,
+  // This method now builds the content for each tab, including its own header
+  Widget _buildTabContentWithHeader({
+    required String tabTitle,         // e.g., "Book a Room"
+    required IconData tabIcon,        // Icon for this specific tab's header
+    required String tabSubtitle,      // Subtitle for this specific tab's header
     required String iframeUrl,
     required String fullscreenUrl,
   }) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
-    // Each tab's content is now wrapped in its own SingleChildScrollView
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
       child: Center(
@@ -77,6 +77,40 @@ class _HotelPageState extends State<HotelPage> with TickerProviderStateMixin {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              // Tab-Specific Header Section
+              Padding(
+                padding: const EdgeInsets.only(bottom: 16.0, top:8.0), // Added top padding
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(tabIcon, size: 32, color: colorScheme.primary), // Slightly larger icon
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                              tabTitle,
+                              style: theme.textTheme.headlineSmall?.copyWith( // Changed to headlineSmall
+                                color: colorScheme.primary,
+                                fontWeight: FontWeight.w600,
+                              )
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (tabSubtitle.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      Padding(
+                        padding: const EdgeInsets.only(left: 44.0), // Indent subtitle to align with text after icon
+                        child: Text(
+                          tabSubtitle,
+                          style: theme.textTheme.bodyLarge?.copyWith(color: colorScheme.onSurfaceVariant),
+                        ),
+                      )
+                    ]
+                  ],
+                ),
+              ),
               // Card for the button and webview
               Card(
                 elevation: 0,
@@ -87,28 +121,6 @@ class _HotelPageState extends State<HotelPage> with TickerProviderStateMixin {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 8.0),
-                        child: Text(
-                          sectionTitle,
-                          style: theme.textTheme.headlineSmall?.copyWith(
-                            color: colorScheme.onSecondaryContainer,
-                            fontWeight: FontWeight.w600,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
-                      if (sectionSubtitle.isNotEmpty)
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 16.0),
-                          child: Text(
-                            sectionSubtitle,
-                            style: theme.textTheme.bodyMedium?.copyWith(
-                              color: colorScheme.onSecondaryContainer.withOpacity(0.8),
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
                       ElevatedButton.icon(
                         icon: Icon(Icons.fullscreen_rounded, color: colorScheme.onPrimary),
                         label: Text('Open Form Fullscreen', style: TextStyle(color: colorScheme.onPrimary)),
@@ -116,7 +128,7 @@ class _HotelPageState extends State<HotelPage> with TickerProviderStateMixin {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (_) => FullscreenWebViewPage(url: fullscreenUrl, title: sectionTitle),
+                              builder: (_) => FullscreenWebViewPage(url: fullscreenUrl, title: tabTitle),
                             ),
                           );
                         },
@@ -130,7 +142,7 @@ class _HotelPageState extends State<HotelPage> with TickerProviderStateMixin {
                       ),
                       const SizedBox(height: 16),
                       SizedBox(
-                        height: 800,
+                        height: 500,
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(16.0),
                           child: InAppWebView(
@@ -140,6 +152,11 @@ class _HotelPageState extends State<HotelPage> with TickerProviderStateMixin {
                               javaScriptEnabled: true,
                               transparentBackground: true,
                             ),
+                            gestureRecognizers: <Factory<OneSequenceGestureRecognizer>>{
+                              Factory<VerticalDragGestureRecognizer>(
+                                    () => VerticalDragGestureRecognizer(),
+                              ),
+                            },
                           ),
                         ),
                       ),
@@ -161,105 +178,64 @@ class _HotelPageState extends State<HotelPage> with TickerProviderStateMixin {
 
     return Scaffold(
       backgroundColor: colorScheme.surface,
-      body: Column( // Main layout is now a Column
+      body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Header Section - Styled like RestaurantPage
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16.0, 24.0, 16.0, 16.0),
-            child: Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: _contentMaxWidth),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.hotel_rounded, // Icon for Hotel
-                          size: 36,
-                          color: colorScheme.primary,
-                        ),
-                        const SizedBox(width: 12),
-                        Text(
-                          'Hotel',
-                          style: theme.textTheme.displaySmall?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: colorScheme.primary,
-                          ),
-                        ),
+          SafeArea(
+            bottom: false,
+            child: Material(
+              color: colorScheme.surface,
+              elevation: 0,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: _contentMaxWidth),
+                    child: TabBar(
+                      controller: _tabController,
+                      labelColor: colorScheme.onPrimaryContainer,
+                      unselectedLabelColor: colorScheme.onSurfaceVariant,
+                      indicatorSize: TabBarIndicatorSize.tab,
+                      indicator: BoxDecoration(
+                        borderRadius: BorderRadius.circular(24.0),
+                        color: colorScheme.primaryContainer,
+                      ),
+                      splashBorderRadius: BorderRadius.circular(24.0),
+                      dividerHeight: 0.0,
+                      tabs: const [
+                        Tab(text: 'Book'),
+                        Tab(text: 'Arriving'),
+                        Tab(text: 'Leaving'),
                       ],
                     ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Staying at weB&B? Select an option from below to get started.',
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-
-          // Pill Navigation TabBar
-          Material(
-            color: colorScheme.surface,
-            elevation: 0,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(
-                  horizontal: 16.0, vertical: 8.0),
-              child: Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: _contentMaxWidth),
-                  child: TabBar(
-                    controller: _tabController,
-                    labelColor: colorScheme.onPrimaryContainer,
-                    unselectedLabelColor: colorScheme.onSurfaceVariant,
-                    indicatorSize: TabBarIndicatorSize.tab,
-                    indicator: BoxDecoration(
-                      borderRadius: BorderRadius.circular(24.0),
-                      color: colorScheme.primaryContainer,
-                    ),
-                    splashBorderRadius: BorderRadius.circular(24.0),
-                    dividerHeight: 0.0,
-                    tabs: const [
-                      Tab(text: 'Book'),
-                      Tab(text: 'Arriving'),
-                      Tab(text: 'Leaving'),
-                    ],
                   ),
                 ),
               ),
             ),
           ),
-          // TabBarView wrapped in Expanded to take remaining space
           Expanded(
             child: TabBarView(
               controller: _tabController,
               physics: const NeverScrollableScrollPhysics(),
-              // Prevent TabBarView from handling swipes if children scroll
               children: [
-                // Book Tab
-                _buildHotelContentSection(
-                  sectionTitle: 'Book a Room',
-                  sectionSubtitle: 'Book a room at weB&B below.',
+                _buildTabContentWithHeader(
+                  tabTitle: 'Book a Room',
+                  tabIcon: Icons.calendar_month_rounded,
+                  tabSubtitle: 'Book a room at weB&B below.',
                   iframeUrl: _bookRoomFormUrl,
                   fullscreenUrl: _bookRoomFullscreenUrl,
                 ),
-                // Arriving Tab
-                _buildHotelContentSection(
-                  sectionTitle: 'Arriving',
-                  sectionSubtitle: 'Welcome! Check in below. :)',
+                _buildTabContentWithHeader(
+                  tabTitle: 'Arriving',
+                  tabIcon: Icons.login_rounded,
+                  tabSubtitle: 'Welcome! Check in below. :)',
                   iframeUrl: _checkInFormUrl,
                   fullscreenUrl: _checkInFullscreenUrl,
                 ),
-                // Leaving Tab
-                _buildHotelContentSection(
-                  sectionTitle: 'Leaving',
-                  sectionSubtitle: 'Thank you for staying with us! Check out below. :)',
+                _buildTabContentWithHeader(
+                  tabTitle: 'Leaving',
+                  tabIcon: Icons.logout_rounded,
+                  tabSubtitle: 'Thank you for staying with us! Check out below. :)',
                   iframeUrl: _checkOutFormUrl,
                   fullscreenUrl: _checkOutFullscreenUrl,
                 ),

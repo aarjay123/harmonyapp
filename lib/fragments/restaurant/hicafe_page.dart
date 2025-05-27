@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:flutter/gestures.dart'; // Import for GestureRecognizers
-import 'package:flutter/foundation.dart' show Factory;
+import 'package:flutter/foundation.dart' show Factory; // Import Factory
 
 // A simple page to display a webview in fullscreen
 class FullscreenWebViewPage extends StatelessWidget {
@@ -135,7 +135,7 @@ class _HiCafePageState extends State<HiCafePage> with TickerProviderStateMixin {
                       ),
                       const SizedBox(height: 16),
                       SizedBox(
-                        height: 600, // Adjusted height, ensure it's reasonable
+                        height: 550, // Adjusted height, ensure it's reasonable
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(16.0),
                           child: InAppWebView(
@@ -146,10 +146,11 @@ class _HiCafePageState extends State<HiCafePage> with TickerProviderStateMixin {
                               transparentBackground: true,
                             ),
                             // Add gesture recognizers to allow webview scrolling
-                            gestureRecognizers: Set()
-                              ..add(Factory<VerticalDragGestureRecognizer>(
+                            gestureRecognizers: <Factory<OneSequenceGestureRecognizer>>{
+                              Factory<VerticalDragGestureRecognizer>(
                                     () => VerticalDragGestureRecognizer(),
-                              )),
+                              ),
+                            },
                           ),
                         ),
                       ),
@@ -208,7 +209,7 @@ class _HiCafePageState extends State<HiCafePage> with TickerProviderStateMixin {
                   ),
                   const SizedBox(height: 16),
                   SizedBox(
-                    height: 600, // Adjusted height
+                    height: 550, // Adjusted height
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(16.0),
                       child: InAppWebView(
@@ -219,10 +220,11 @@ class _HiCafePageState extends State<HiCafePage> with TickerProviderStateMixin {
                           transparentBackground: true,
                         ),
                         // Add gesture recognizers to allow webview scrolling
-                        gestureRecognizers: Set()
-                          ..add(Factory<VerticalDragGestureRecognizer>(
+                        gestureRecognizers: <Factory<OneSequenceGestureRecognizer>>{
+                          Factory<VerticalDragGestureRecognizer>(
                                 () => VerticalDragGestureRecognizer(),
-                          )),
+                          ),
+                        },
                       ),
                     ),
                   ),
