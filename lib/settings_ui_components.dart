@@ -1,5 +1,42 @@
 import 'package:flutter/material.dart';
 
+// Define a constant for max width that can be used by the template
+const double kSettingsContentMaxWidth = 768.0;
+
+/// A reusable page template for settings screens.
+///
+/// This widget provides a consistent layout with an AppBar and a
+/// centered content area with a maximum width constraint.
+class SettingsPageTemplate extends StatelessWidget {
+  final String title;
+  final List<Widget> children;
+
+  const SettingsPageTemplate({
+    super.key,
+    required this.title,
+    required this.children,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(title),
+      ),
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: kSettingsContentMaxWidth),
+          child: ListView(
+            padding: const EdgeInsets.all(24.0),
+            children: children,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+
 // Helper class to define the structure of an item data
 // This can be used by pages to structure their settings items
 class SettingsListItemData {
@@ -33,7 +70,7 @@ class SettingsGroupTitle extends StatelessWidget {
     final colorScheme = theme.colorScheme;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 12.0),
+      padding: const EdgeInsets.fromLTRB(0, 24, 0, 12), // Adjusted padding for list view
       child: Text(
         title,
         style: theme.textTheme.titleLarge?.copyWith(
