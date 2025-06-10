@@ -323,6 +323,7 @@ class _ResponsiveScaffoldState extends State<ResponsiveScaffold> {
         selectedIndex: _selectedIndex,
         onDestinationSelected: _onItemTapped,
         height: 60,
+        elevation: 8,
         destinations: const [
           NavigationDestination(icon: Icon(Icons.home_rounded), label: 'Home'),
           NavigationDestination(icon: Icon(Icons.restaurant_rounded), label: 'Food'),
