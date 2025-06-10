@@ -203,7 +203,7 @@ class _ResponsiveScaffoldState extends State<ResponsiveScaffold> {
   int _selectedIndex = 0; // Tracks currently selected navigation index
 
   final List<String> _titles = [
-    'Home',
+    'Dashboard',
     'Food',
     'Hotel',
     'Room Key',
@@ -301,7 +301,7 @@ class _ResponsiveScaffoldState extends State<ResponsiveScaffold> {
           : NavigationRailLabelType.none,
       destinations: const [
         NavigationRailDestination(
-            icon: Icon(Icons.home_rounded), label: Text('Home')),
+            icon: Icon(Icons.dashboard_rounded), label: Text('Dashboard')),
         NavigationRailDestination(
             icon: Icon(Icons.restaurant_rounded), label: Text('Food')),
         NavigationRailDestination(
@@ -325,7 +325,7 @@ class _ResponsiveScaffoldState extends State<ResponsiveScaffold> {
         height: 60,
         elevation: 8,
         destinations: const [
-          NavigationDestination(icon: Icon(Icons.home_rounded), label: 'Home'),
+          NavigationDestination(icon: Icon(Icons.dashboard_rounded), label: 'Dashboard'),
           NavigationDestination(icon: Icon(Icons.restaurant_rounded), label: 'Food'),
           NavigationDestination(icon: Icon(Icons.hotel_rounded), label: 'Hotel'),
           NavigationDestination(icon: Icon(Icons.key_rounded), label: 'Room Key'),

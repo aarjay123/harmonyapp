@@ -91,10 +91,8 @@ class _NewsFeedCardState extends State<NewsFeedCard> {
     // Please ensure it is active and has requests remaining on NewsAPI.org dashboard.
     const String newsApiKey = '060f8eb17f9345b59475d62a5fcac3db'; // Use your actual key here
 
-    // --- MODIFIED: Changed country from 'gb' to 'us' for testing ---
-    // NewsAPI.org's free tier often has more "top headlines" for the US.
-    // You can try 'gb' again or other countries once you confirm it works with 'us'.
-    final Uri uri = Uri.parse('https://newsapi.org/v2/top-headlines?sources=bbc-news&pageSize=10&apiKey=$newsApiKey'); // Added pageSize=10
+    // You can try 'gb' again or other countries/sources once you confirm it works.
+    final Uri uri = Uri.parse('https://newsapi.org/v2/top-headlines?sources=bbc-news&pageSize=10&apiKey=$newsApiKey'); // Using bbc-news source
 
     // Check if API key is empty or still the placeholder
     if (newsApiKey == 'YOUR_ACTUAL_NEWS_API_KEY_HERE' || newsApiKey.isEmpty) {
@@ -1573,6 +1571,7 @@ class _NativeWelcomePageState extends State<NativeWelcomePage> {
                     child: ReorderableListView.builder(
                       shrinkWrap: true, // Ensures it takes up only needed vertical space
                       physics: const NeverScrollableScrollPhysics(), // Handled by CustomScrollView
+                      buildDefaultDragHandles: false, // MODIFIED: Disable default drag handles
                       itemCount: _userWidgetOrder.length,
                       onReorder: (int oldIndex, int newIndex) {
                         setState(() {
@@ -1627,22 +1626,28 @@ class _NativeWelcomePageState extends State<NativeWelcomePage> {
                             ),
                           );
 
-                          // Enable dragging for reordering only in edit mode
+                          // Only enable dragging and show handle in edit mode
                           if (_isInEditMode) {
                             return ReorderableDelayedDragStartListener(
                               key: ValueKey(widgetId), // Unique key for ReorderableListView
                               index: index,
-                              child: itemContent,
+                              // MODIFIED: Wrap itemContent with a Row and add a drag handle icon
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Expanded(child: itemContent),
+                                  // Drag handle
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 8.0, left: 8.0),
+                                    child: Icon(Icons.drag_handle_rounded, color: theme.colorScheme.onSurfaceVariant.withOpacity(0.5)),
+                                  ),
+                                ],
+                              ),
                             );
                           } else {
-                            // Enable long press to enter edit mode
-                            return GestureDetector(
-                              key: ValueKey(widgetId), // Unique key for widget identity
-                              onLongPress: () {
-                                setState(() {
-                                  _isInEditMode = true;
-                                });
-                              },
+                            // When not in edit mode, just display the content without reordering
+                            return SizedBox( // Wrap in SizedBox to provide a key for ListView
+                              key: ValueKey(widgetId),
                               child: itemContent,
                             );
                           }
@@ -1675,9 +1680,28 @@ class _NativeWelcomePageState extends State<NativeWelcomePage> {
                   ),
                 ),
               ),
-            // Add some padding at the bottom, especially when in edit mode
+            // NEW: Button to toggle edit mode, always visible at the bottom
             SliverToBoxAdapter(
-              child: SizedBox(height: _isInEditMode ? 24.0 : 0.0),
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: _contentMaxWidth),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 24.0),
+                    child: FilledButton.tonal(
+                      onPressed: () {
+                        setState(() {
+                          _isInEditMode = !_isInEditMode; // Toggle edit mode
+                        });
+                      },
+                      style: FilledButton.styleFrom(
+                        minimumSize: const Size.fromHeight(50),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0)),
+                      ),
+                      child: Text(_isInEditMode ? 'Exit Edit Mode' : 'Edit Widgets'),
+                    ),
+                  ),
+                ),
+              ),
             ),
           ],
         ),

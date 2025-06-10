@@ -1,8 +1,8 @@
+// fragments/restaurant.dart
+
 import 'package:flutter/material.dart';
 
 // Import the newly created HiCafePage
-// Assuming hicafe_page.dart is in a subdirectory 'restaurant' under 'fragments'
-// Adjust the path if your file structure is different.
 import 'restaurant/hicafe_page.dart';
 import 'restaurant/breakfast_page.dart';
 import 'restaurant/cafefiesta_page.dart';
@@ -14,54 +14,56 @@ class RestaurantPage extends StatelessWidget {
   // Define a max width for desktop-like content presentation
   static const double _contentMaxWidth = 768.0;
 
-  // Helper function to create styled list items similar to the buttons
+  // Helper function to create styled list items for restaurant options
   Widget _buildRestaurantOption({
     required BuildContext context,
     required IconData icon,
     required String label,
     required VoidCallback onTap,
-    bool isFirst = false,
-    bool isLast = false,
   }) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
-    // Define border radius based on position
-    BorderRadius borderRadius;
-    if (isFirst && isLast) { // Only one item
-      borderRadius = BorderRadius.circular(16.0);
-    } else if (isFirst) {
-      borderRadius = const BorderRadius.vertical(top: Radius.circular(16.0), bottom: Radius.circular(5.0));
-    } else if (isLast) {
-      borderRadius = const BorderRadius.vertical(top: Radius.circular(5.0), bottom: Radius.circular(16.0));
-    } else {
-      borderRadius = BorderRadius.circular(5.0);
-    }
+    // Apply a consistent border radius to all cards
+    BorderRadius borderRadius = BorderRadius.circular(16.0);
 
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 1.0), // Small gap like settings items
-      child: Material(
-        color: colorScheme.secondaryContainer, // Using a card-like color
-        shape: RoundedRectangleBorder(borderRadius: borderRadius),
-        clipBehavior: Clip.antiAlias,
+    return Container(
+      // No external margin here, spacing is handled by SizedBox in the parent Column
+      decoration: BoxDecoration(
+        color: colorScheme.secondaryContainer, // Background color for the item
+        borderRadius: borderRadius,
+        boxShadow: [ // Softer shadow for depth
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08), // Slightly more visible than 0.05, but still subtle
+            spreadRadius: 1,
+            blurRadius: 6, // Slightly more blur
+            offset: const Offset(0, 3), // More pronounced vertical offset
+          ),
+        ],
+      ),
+      child: Material( // Material widget for InkWell splash effect
+        color: Colors.transparent, // Make Material transparent to show Container's decoration
         child: InkWell(
           onTap: onTap,
+          borderRadius: borderRadius, // Match container's border radius
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 18.0),
+            padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 20.0), // Generous internal padding
             child: Row(
               children: [
-                Icon(icon, color: colorScheme.onSecondaryContainer, size: 28), // Adjusted for secondaryContainer
+                Icon(icon, color: colorScheme.onSecondaryContainer, size: 32), // Clear icon size
                 const SizedBox(width: 16.0),
                 Expanded(
                   child: Text(
                     label,
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      color: colorScheme.onSecondaryContainer, // Adjusted for secondaryContainer
-                      fontWeight: FontWeight.w500,
+                    style: theme.textTheme.titleLarge?.copyWith( // Prominent and bold text
+                      color: colorScheme.onSecondaryContainer,
+                      fontWeight: FontWeight.w600,
                     ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                Icon(Icons.chevron_right_rounded, color: colorScheme.onSecondaryContainer.withOpacity(0.7)), // Adjusted for secondaryContainer
+                Icon(Icons.chevron_right_rounded, color: colorScheme.onSecondaryContainer.withOpacity(0.7)), // Navigation icon
               ],
             ),
           ),
@@ -110,7 +112,7 @@ class RestaurantPage extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // Header Section - styled like welcome page
+                  // Header Section - styled like welcome page (Kept as requested)
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: 24.0),
                     child: Column(
@@ -145,27 +147,26 @@ class RestaurantPage extends StatelessWidget {
                       ],
                     ),
                   ),
-                  // const SizedBox(height: 20.0), // Original spacing before action items, adjust as needed
+                  const SizedBox(height: 12.0), // Adjusted spacing before list items
 
-                  // Action Items
-                  // The Container around this Column of options is not strictly needed
-                  // if there's no specific background or decoration for the group itself.
-                  // The _buildRestaurantOption handles its own background.
+                  // Action Items - Now a refined list
                   Column(
                     children: List.generate(restaurantActions.length, (index) {
                       final action = restaurantActions[index];
-                      return _buildRestaurantOption(
-                        context: context,
-                        icon: action['icon'] as IconData,
-                        label: action['label'] as String,
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (_) => action['page'] as Widget),
-                          );
-                        },
-                        isFirst: index == 0,
-                        isLast: index == restaurantActions.length - 1,
+                      // Add SizedBox for vertical spacing BETWEEN items
+                      return Padding(
+                        padding: EdgeInsets.only(bottom: index == restaurantActions.length - 1 ? 0.0 : 12.0), // Space after each, but not the last
+                        child: _buildRestaurantOption(
+                          context: context,
+                          icon: action['icon'] as IconData,
+                          label: action['label'] as String,
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (_) => action['page'] as Widget),
+                            );
+                          },
+                        ),
                       );
                     }),
                   ),

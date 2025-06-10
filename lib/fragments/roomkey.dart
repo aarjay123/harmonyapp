@@ -1,16 +1,18 @@
+// fragments/roomkey.dart
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart'; // Import for date formatting
 
-class RoomKeyPage extends StatefulWidget { // Changed to StatefulWidget
+class RoomKeyPage extends StatefulWidget {
   const RoomKeyPage({super.key});
 
   @override
   State<RoomKeyPage> createState() => _RoomKeyPageState();
 }
 
-class _RoomKeyPageState extends State<RoomKeyPage> { // New State class
+class _RoomKeyPageState extends State<RoomKeyPage> {
   // Define a max width for desktop-like content presentation
-  static const double _contentMaxWidth = 400.0; // Adjusted for a card-like appearance
+  static const double _contentMaxWidth = 450.0; // Slightly increased for better card proportion
   final String _nfcGifUrl = 'https://cdn.dribbble.com/users/1489841/screenshots/11131159/nfc.gif';
 
   // Placeholder data - in a real app, this would come from user session, booking details, etc.
@@ -30,14 +32,12 @@ class _RoomKeyPageState extends State<RoomKeyPage> { // New State class
 
   void _updateDates() {
     final now = DateTime.now();
-    final dateFormat = DateFormat('MMM d, yyyy'); // Example: May 26, 2025
+    // Example: May 26, 2025 (e.g., Mon, Jun 10)
+    final dateFormat = DateFormat('EEE, MMM d, y');
 
     _checkInDate = dateFormat.format(now);
     _checkOutDate = dateFormat.format(now.add(const Duration(days: 2))); // Check-out 2 days from now
-
-    // No need to call setState here as initState is called before the first build
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -54,7 +54,7 @@ class _RoomKeyPageState extends State<RoomKeyPage> { // New State class
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Header Section
+                // Header Section - Kept as requested
                 Padding(
                   padding: const EdgeInsets.only(bottom: 24.0, top: 8.0),
                   child: Row(
@@ -67,7 +67,7 @@ class _RoomKeyPageState extends State<RoomKeyPage> { // New State class
                       ),
                       const SizedBox(width: 12),
                       Text(
-                        'Room Key', // Changed title slightly
+                        'Room Key', // Title remains the same
                         style: theme.textTheme.displaySmall?.copyWith(
                           fontWeight: FontWeight.bold,
                           color: colorScheme.primary,
@@ -80,10 +80,10 @@ class _RoomKeyPageState extends State<RoomKeyPage> { // New State class
 
                 // Digital Key Card
                 Card(
-                  elevation: 4.0, // Give it a slight lift
+                  elevation: 8.0, // Increased elevation for a more premium feel
                   color: colorScheme.primaryContainer,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20.0)), // More rounded
-                  clipBehavior: Clip.antiAlias,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24.0)), // More rounded corners
+                  clipBehavior: Clip.antiAlias, // Ensures content respects rounded corners
                   child: InkWell( // Make the whole card tappable for "unlock" action
                     onTap: () {
                       // TODO: Implement NFC tap/unlock functionality
@@ -91,9 +91,9 @@ class _RoomKeyPageState extends State<RoomKeyPage> { // New State class
                         const SnackBar(content: Text('Room key tapped! (NFC action pending)')),
                       );
                     },
-                    borderRadius: BorderRadius.circular(20.0),
+                    borderRadius: BorderRadius.circular(24.0), // Match card border radius
                     child: Padding(
-                      padding: const EdgeInsets.all(20.0),
+                      padding: const EdgeInsets.all(28.0), // Increased padding for spaciousness
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -102,44 +102,53 @@ class _RoomKeyPageState extends State<RoomKeyPage> { // New State class
                             _hotelName,
                             style: theme.textTheme.titleSmall?.copyWith(
                               color: colorScheme.onPrimaryContainer.withOpacity(0.8),
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
-                          const SizedBox(height: 16.0),
+                          const SizedBox(height: 24.0), // More vertical space
+
+                          // Room Number - Made more prominent
                           Text(
                             'ROOM',
-                            style: theme.textTheme.labelMedium?.copyWith(
+                            style: theme.textTheme.labelLarge?.copyWith(
                               color: colorScheme.onPrimaryContainer.withOpacity(0.7),
-                              letterSpacing: 1.5,
+                              letterSpacing: 2.0, // Increased letter spacing
+                              fontWeight: FontWeight.bold,
                             ),
                           ),
                           Text(
                             _roomNumber,
-                            style: theme.textTheme.displayMedium?.copyWith(
+                            style: theme.textTheme.displayLarge?.copyWith( // Larger font size
                               color: colorScheme.onPrimaryContainer,
-                              fontWeight: FontWeight.bold,
+                              fontWeight: FontWeight.w900, // Extra bold
                             ),
                           ),
-                          const SizedBox(height: 20.0),
+                          const SizedBox(height: 32.0), // More vertical space
+
+                          // Guest & Dates Section
                           Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            crossAxisAlignment: CrossAxisAlignment.start, // Align top of children
                             children: [
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'GUEST',
-                                    style: theme.textTheme.labelSmall?.copyWith(color: colorScheme.onPrimaryContainer.withOpacity(0.7)),
-                                  ),
-                                  Text(
-                                    _guestName,
-                                    style: theme.textTheme.bodyLarge?.copyWith(color: colorScheme.onPrimaryContainer, fontWeight: FontWeight.w500),
-                                  ),
-                                ],
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'GUEST',
+                                      style: theme.textTheme.labelSmall?.copyWith(color: colorScheme.onPrimaryContainer.withOpacity(0.7), letterSpacing: 1.0),
+                                    ),
+                                    Text(
+                                      _guestName,
+                                      style: theme.textTheme.titleMedium?.copyWith(color: colorScheme.onPrimaryContainer, fontWeight: FontWeight.w600),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ],
+                                ),
                               ),
-                              // You can add another piece of info here if needed
                             ],
                           ),
-                          const SizedBox(height: 12.0),
+                          const SizedBox(height: 16.0), // Space between guest and dates
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
@@ -148,11 +157,11 @@ class _RoomKeyPageState extends State<RoomKeyPage> { // New State class
                                 children: [
                                   Text(
                                     'CHECK-IN',
-                                    style: theme.textTheme.labelSmall?.copyWith(color: colorScheme.onPrimaryContainer.withOpacity(0.7)),
+                                    style: theme.textTheme.labelSmall?.copyWith(color: colorScheme.onPrimaryContainer.withOpacity(0.7), letterSpacing: 1.0),
                                   ),
                                   Text(
                                     _checkInDate, // Using dynamic date
-                                    style: theme.textTheme.bodyMedium?.copyWith(color: colorScheme.onPrimaryContainer),
+                                    style: theme.textTheme.titleSmall?.copyWith(color: colorScheme.onPrimaryContainer),
                                   ),
                                 ],
                               ),
@@ -161,38 +170,40 @@ class _RoomKeyPageState extends State<RoomKeyPage> { // New State class
                                 children: [
                                   Text(
                                     'CHECK-OUT',
-                                    style: theme.textTheme.labelSmall?.copyWith(color: colorScheme.onPrimaryContainer.withOpacity(0.7)),
+                                    style: theme.textTheme.labelSmall?.copyWith(color: colorScheme.onPrimaryContainer.withOpacity(0.7), letterSpacing: 1.0),
                                   ),
                                   Text(
                                     _checkOutDate, // Using dynamic date
-                                    style: theme.textTheme.bodyMedium?.copyWith(color: colorScheme.onPrimaryContainer),
+                                    style: theme.textTheme.titleSmall?.copyWith(color: colorScheme.onPrimaryContainer),
                                   ),
                                 ],
                               ),
                             ],
                           ),
-                          const SizedBox(height: 24.0),
-                          Center( // Center the NFC interaction area
+                          const SizedBox(height: 32.0), // More space before NFC area
+
+                          // NFC Interaction Area
+                          Center(
                             child: Column(
                               children: [
                                 Image.network(
                                   _nfcGifUrl,
                                   fit: BoxFit.contain,
-                                  height: 100, // Adjusted GIF size
+                                  height: 120, // Increased GIF size
                                   loadingBuilder: (context, child, loadingProgress) {
                                     if (loadingProgress == null) return child;
-                                    return const SizedBox(height: 100, child: Center(child: CircularProgressIndicator()));
+                                    return SizedBox(height: 120, child: Center(child: CircularProgressIndicator(color: colorScheme.onPrimaryContainer.withOpacity(0.5))));
                                   },
                                   errorBuilder: (context, error, stackTrace) {
-                                    return Icon(Icons.nfc_rounded, size: 80, color: colorScheme.onPrimaryContainer.withOpacity(0.5));
+                                    return Icon(Icons.nfc_rounded, size: 100, color: colorScheme.onPrimaryContainer.withOpacity(0.5));
                                   },
                                 ),
-                                const SizedBox(height: 12.0),
+                                const SizedBox(height: 16.0), // Space between GIF and text
                                 Text(
                                   'Tap phone on door handle to unlock',
-                                  style: theme.textTheme.titleMedium?.copyWith(
+                                  style: theme.textTheme.titleLarge?.copyWith( // Larger, more prominent text
                                     color: colorScheme.onPrimaryContainer,
-                                    fontWeight: FontWeight.w500,
+                                    fontWeight: FontWeight.w600,
                                   ),
                                   textAlign: TextAlign.center,
                                 ),
@@ -204,25 +215,27 @@ class _RoomKeyPageState extends State<RoomKeyPage> { // New State class
                     ),
                   ),
                 ),
-                const SizedBox(height: 20.0),
+                const SizedBox(height: 24.0), // Space before NFC info box
 
-                // NFC Information
+                // NFC Information Box - Styled for clarity
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 10.0),
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 14.0),
                   decoration: BoxDecoration(
-                    color: colorScheme.surfaceContainerHighest, // A slightly different background for this info
-                    borderRadius: BorderRadius.circular(12.0),
+                    color: colorScheme.surfaceContainer, // A distinct background color
+                    borderRadius: BorderRadius.circular(16.0), // Match key card's roundedness
+                    border: Border.all(color: colorScheme.outlineVariant.withOpacity(0.5), width: 1.0), // Subtle border
                   ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.info_outline_rounded, color: colorScheme.onSurfaceVariant, size: 20),
-                      const SizedBox(width: 8),
+                      Icon(Icons.info_outline_rounded, color: colorScheme.onSurfaceVariant, size: 22),
+                      const SizedBox(width: 10),
                       Expanded(
                         child: Text(
-                          'NFC must be enabled on your device to use this feature.',
+                          'NFC must be enabled on your device to use this feature. Ensure your phone is unlocked.',
                           style: theme.textTheme.bodyMedium?.copyWith(
                             color: colorScheme.onSurfaceVariant,
+                            height: 1.4, // Improve line spacing
                           ),
                           textAlign: TextAlign.center,
                         ),
@@ -230,6 +243,7 @@ class _RoomKeyPageState extends State<RoomKeyPage> { // New State class
                     ],
                   ),
                 ),
+                const SizedBox(height: 24.0), // Final padding at bottom
               ],
             ),
           ),
