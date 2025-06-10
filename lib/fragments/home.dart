@@ -7,8 +7,9 @@ import 'package:http/http.dart' as http; // For making API requests
 import 'dart:convert'; // For decoding JSON
 import 'dart:async'; // For TimeoutException
 import 'package:url_launcher/url_launcher.dart'; // For opening news article URLs
+import 'package:shared_preferences/shared_preferences.dart'; // For local data persistence
 
-// IMPORTANT: Add 'url_launcher: ^6.2.2' to your pubspec.yaml under dependencies:
+// IMPORTANT: Add 'url_launcher: ^6.2.2' and 'shared_preferences: ^2.2.0' to your pubspec.yaml under dependencies:
 // Example pubspec.yaml:
 /*
 dependencies:
@@ -17,7 +18,8 @@ dependencies:
   http: ^1.2.1
   intl: ^0.19.0
   geolocator: ^11.0.0
-  url_launcher: ^6.2.2 # Add this line
+  url_launcher: ^6.2.2
+  shared_preferences: ^2.2.0 # Add this line
 */
 
 
@@ -304,10 +306,7 @@ class _QuickNotesCardState extends State<QuickNotesCard> {
   @override
   void initState() {
     super.initState();
-    _notesController = TextEditingController(text: 'Write your quick notes here...');
-    // In a real app, you would load saved notes from SharedPreferences or similar
-    // For example:
-    // _loadNotes();
+    _loadNotes(); // MODIFIED: Load saved notes on init
   }
 
   @override
@@ -316,18 +315,19 @@ class _QuickNotesCardState extends State<QuickNotesCard> {
     super.dispose();
   }
 
-  // Example of how to load/save notes using SharedPreferences (needs 'shared_preferences' package)
-  // Future<void> _loadNotes() async {
-  //   final prefs = await SharedPreferences.getInstance();
-  //   setState(() {
-  //     _notesController.text = prefs.getString('quickNotes') ?? 'Write your quick notes here...';
-  //   });
-  // }
+  // MODIFIED: Load notes from SharedPreferences
+  Future<void> _loadNotes() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _notesController = TextEditingController(text: prefs.getString('quickNotes') ?? 'Write your quick notes here...');
+    });
+  }
 
-  // Future<void> _saveNotes(String notes) async {
-  //   final prefs = await SharedPreferences.getInstance();
-  //   prefs.setString('quickNotes', notes);
-  // }
+  // MODIFIED: Save notes to SharedPreferences
+  Future<void> _saveNotes(String notes) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('quickNotes', notes);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -374,16 +374,15 @@ class _QuickNotesCardState extends State<QuickNotesCard> {
               ),
               style: theme.textTheme.bodyLarge?.copyWith(color: colorScheme.onSurfaceVariant),
               cursorColor: colorScheme.primary,
-              // onChanged: _saveNotes, // Uncomment this in a real app with SharedPreferences integration
+              onChanged: _saveNotes, // MODIFIED: Save notes as they change
             ),
             const SizedBox(height: 8),
             Align(
               alignment: Alignment.centerRight,
               child: TextButton.icon(
                 onPressed: () {
-                  // Action to clear notes or save
                   _notesController.clear();
-                  // _saveNotes(''); // Clear saved notes
+                  _saveNotes(''); // MODIFIED: Clear saved notes
                 },
                 icon: const Icon(Icons.clear_all_rounded, size: 18),
                 label: const Text('Clear Notes'),
@@ -580,6 +579,345 @@ class _CalendarCardState extends State<CalendarCard> {
   }
 }
 
+// QuickLinksCard Widget
+class QuickLinksCard extends StatefulWidget {
+  const QuickLinksCard({super.key});
+
+  @override
+  State<QuickLinksCard> createState() => _QuickLinksCardState();
+}
+
+class _QuickLinksCardState extends State<QuickLinksCard> {
+  // Use a mutable list for links, to allow adding/removing
+  List<Map<String, String>> _links = [];
+  final TextEditingController _titleController = TextEditingController();
+  final TextEditingController _urlController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _loadLinks(); // MODIFIED: Load saved links on init
+  }
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    _urlController.dispose();
+    super.dispose();
+  }
+
+  // MODIFIED: Load links from SharedPreferences
+  Future<void> _loadLinks() async {
+    final prefs = await SharedPreferences.getInstance();
+    final String? linksJson = prefs.getString('quickLinks');
+    if (linksJson != null && linksJson.isNotEmpty) {
+      final List<dynamic> decoded = json.decode(linksJson);
+      setState(() {
+        _links = decoded.map((item) => Map<String, String>.from(item)).toList();
+      });
+    }
+  }
+
+  // MODIFIED: Save links to SharedPreferences
+  Future<void> _saveLinks() async {
+    final prefs = await SharedPreferences.getInstance();
+    final String linksJson = json.encode(_links);
+    await prefs.setString('quickLinks', linksJson);
+  }
+
+  void _addLink() {
+    if (_titleController.text.isNotEmpty && _urlController.text.isNotEmpty) {
+      // Basic URL validation
+      // MODIFIED: Added null check and default for hasScheme
+      if (!(Uri.tryParse(_urlController.text)?.hasScheme ?? false)) {
+        // Prepend https:// if no scheme is provided or if parsing failed
+        _urlController.text = 'https://${_urlController.text}';
+      }
+
+      setState(() {
+        _links.add({
+          'title': _titleController.text,
+          'url': _urlController.text,
+        });
+      });
+      _saveLinks(); // Save after adding
+      _titleController.clear();
+      _urlController.clear();
+      Navigator.of(context).pop(); // Close the dialog
+    }
+  }
+
+  void _removeLink(int index) {
+    setState(() {
+      _links.removeAt(index);
+    });
+    _saveLinks(); // Save after removing
+  }
+
+  void _showAddLinkDialog(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.0)),
+          backgroundColor: colorScheme.surfaceContainerHigh,
+          title: Text('Add New Link', style: theme.textTheme.titleLarge?.copyWith(color: colorScheme.onSurface)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: _titleController,
+                decoration: InputDecoration(
+                  labelText: 'Link Title',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8.0)),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _urlController,
+                decoration: InputDecoration(
+                  labelText: 'URL (e.g., https://example.com)',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8.0)),
+                ),
+                keyboardType: TextInputType.url,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text('Cancel', style: TextStyle(color: colorScheme.primary)),
+            ),
+            FilledButton(
+              onPressed: _addLink,
+              child: const Text('Add'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.0)),
+      color: colorScheme.surfaceContainerHighest,
+      child: Padding(
+        padding: const EdgeInsets.all(20.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.link_rounded, color: colorScheme.onSurfaceVariant, size: 28),
+                const SizedBox(width: 12),
+                Text(
+                  "Quick Links",
+                  style: theme.textTheme.titleLarge?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                      fontWeight: FontWeight.w600
+                  ),
+                ),
+                const Spacer(),
+                IconButton(
+                  icon: Icon(Icons.add_circle_outline_rounded, color: colorScheme.onSurfaceVariant.withOpacity(0.7)),
+                  onPressed: () => _showAddLinkDialog(context),
+                  tooltip: 'Add New Link',
+                )
+              ],
+            ),
+            const SizedBox(height: 16),
+            _links.isEmpty
+                ? Text(
+              'No quick links added yet. Tap + to add one!',
+              style: theme.textTheme.bodyMedium?.copyWith(color: colorScheme.onSurfaceVariant.withOpacity(0.7)),
+            )
+                : Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: List.generate(_links.length, (index) {
+                final link = _links[index];
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 8.0),
+                  child: InkWell(
+                    onTap: () async {
+                      final Uri url = Uri.parse(link['url']!);
+                      if (await canLaunchUrl(url)) {
+                        await launchUrl(url, mode: LaunchMode.externalApplication);
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Could not open link: ${link['url']}')),
+                        );
+                      }
+                    },
+                    onLongPress: () {
+                      // Option to remove link on long press
+                      showDialog(
+                        context: context,
+                        builder: (dialogContext) => AlertDialog(
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.0)),
+                          backgroundColor: colorScheme.surfaceContainerHigh,
+                          title: Text('Remove Link', style: theme.textTheme.titleLarge?.copyWith(color: colorScheme.onSurface)),
+                          content: Text('Do you want to remove "${link['title']}"?', style: theme.textTheme.bodyLarge?.copyWith(color: colorScheme.onSurfaceVariant)),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.of(dialogContext).pop(),
+                              child: Text('Cancel', style: TextStyle(color: colorScheme.primary)),
+                            ),
+                            FilledButton(
+                              onPressed: () {
+                                _removeLink(index);
+                                Navigator.of(dialogContext).pop();
+                              },
+                              style: FilledButton.styleFrom(backgroundColor: colorScheme.error),
+                              child: const Text('Remove'),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                    borderRadius: BorderRadius.circular(8.0),
+                    child: Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Row(
+                        children: [
+                          Icon(Icons.link, size: 20, color: colorScheme.primary),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              link['title']!,
+                              style: theme.textTheme.bodyLarge?.copyWith(color: colorScheme.onSurfaceVariant, fontWeight: FontWeight.w500),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          Icon(Icons.open_in_new_rounded, size: 18, color: colorScheme.onSurfaceVariant.withOpacity(0.7)),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              }),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// NEW WIDGET: Daily Affirmation/Quote Card
+class DailyAffirmationCard extends StatefulWidget {
+  const DailyAffirmationCard({super.key});
+
+  @override
+  State<DailyAffirmationCard> createState() => _DailyAffirmationCardState();
+}
+
+class _DailyAffirmationCardState extends State<DailyAffirmationCard> {
+  List<String> _affirmations = [
+    "I am capable of achieving my goals.",
+    "Every day is a new opportunity to grow and improve.",
+    "I am surrounded by positivity and abundance.",
+    "My potential is limitless.",
+    "I choose joy and happiness today.",
+    "I am grateful for all the good in my life.",
+    "I trust my intuition and make wise decisions.",
+    "I am strong, resilient, and brave.",
+    "Challenges help me discover my inner strength.",
+    "I radiate love and compassion.",
+  ];
+  String _currentAffirmation = "";
+  int _currentAffirmationIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadAffirmationIndex(); // MODIFIED: Load saved index
+  }
+
+  // MODIFIED: Load the last displayed affirmation index
+  Future<void> _loadAffirmationIndex() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _currentAffirmationIndex = prefs.getInt('dailyAffirmationIndex') ?? 0;
+      _currentAffirmation = _affirmations[_currentAffirmationIndex];
+    });
+  }
+
+  // MODIFIED: Save the current affirmation index
+  Future<void> _saveAffirmationIndex(int index) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('dailyAffirmationIndex', index);
+  }
+
+  void _getNewAffirmation() {
+    setState(() {
+      _currentAffirmationIndex = (_currentAffirmationIndex + 1) % _affirmations.length;
+      _currentAffirmation = _affirmations[_currentAffirmationIndex];
+      _saveAffirmationIndex(_currentAffirmationIndex); // Save the new index
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.0)),
+      color: colorScheme.secondaryContainer, // A different color to differentiate
+      child: Padding(
+        padding: const EdgeInsets.all(20.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.star_half_rounded, color: colorScheme.onSecondaryContainer, size: 28),
+                const SizedBox(width: 12),
+                Text(
+                  "Daily Affirmation",
+                  style: theme.textTheme.titleLarge?.copyWith(
+                      color: colorScheme.onSecondaryContainer,
+                      fontWeight: FontWeight.w600
+                  ),
+                ),
+                const Spacer(),
+                IconButton(
+                  icon: Icon(Icons.refresh_rounded, color: colorScheme.onSecondaryContainer.withOpacity(0.7)),
+                  onPressed: _getNewAffirmation,
+                  tooltip: 'New Affirmation',
+                )
+              ],
+            ),
+            const SizedBox(height: 16),
+            Center(
+              child: Text(
+                _currentAffirmation,
+                textAlign: TextAlign.center,
+                style: theme.textTheme.headlineSmall?.copyWith(
+                  color: colorScheme.onSecondaryContainer,
+                  fontStyle: FontStyle.italic,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+
 // NativeWelcomePage Widget - The main home page
 class NativeWelcomePage extends StatefulWidget {
   final Function(int) onNavigateToTab;
@@ -610,7 +948,7 @@ class _NativeWelcomePageState extends State<NativeWelcomePage> {
 
   // List to store and manage the order of widget IDs
   // In a real app, this would be loaded from persistence (e.g., Firestore/SharedPreferences)
-  List<String> _userWidgetOrder = ['weather_card', 'quick_actions', 'news_feed', 'quick_notes', 'calendar_card'];
+  List<String> _userWidgetOrder = ['weather_card', 'quick_actions', 'news_feed', 'quick_notes', 'calendar_card', 'quick_links', 'daily_affirmation']; // MODIFIED: Removed 'upcoming_events'
 
   // Map to associate widget IDs with their respective builders
   late final Map<String, Widget Function(BuildContext)> _availableWidgets;
@@ -620,6 +958,7 @@ class _NativeWelcomePageState extends State<NativeWelcomePage> {
     super.initState();
     _updateGreetingAndDate();
     _fetchWeatherData();
+    _loadUserWidgetOrder(); // MODIFIED: Load saved order
 
     // Initialize available widgets map
     _availableWidgets = {
@@ -701,30 +1040,34 @@ class _NativeWelcomePageState extends State<NativeWelcomePage> {
       'news_feed': (context) => const NewsFeedCard(),
       'quick_notes': (context) => const QuickNotesCard(),
       'calendar_card': (context) => const CalendarCard(), // New Calendar widget
+      // 'upcoming_events': (context) => const UpcomingEventsCard(), // REMOVED
+      'quick_links': (context) => const QuickLinksCard(), // NEW
+      'daily_affirmation': (context) => const DailyAffirmationCard(), // NEW
     };
-
-    _loadUserWidgetOrder(); // Load saved order (currently uses default)
   }
 
-  // A hypothetical function to load the user's widget order from storage
-  // In a real app, this would be loaded from persistence (e.g., Firestore/SharedPreferences)
-  void _loadUserWidgetOrder() {
-    // For demonstration, we'll just use the default order.
-    // In a real app:
-    // final savedOrder = await SharedPreferences.getInstance().getStringList('widgetOrder');
-    // if (savedOrder != null) {
-    //   setState(() {
-    //     _userWidgetOrder = savedOrder;
-    //   });
-    // }
+  // MODIFIED: Load the user's widget order from SharedPreferences
+  Future<void> _loadUserWidgetOrder() async {
+    final prefs = await SharedPreferences.getInstance();
+    final List<String>? savedOrder = prefs.getStringList('userWidgetOrder');
+    if (savedOrder != null && savedOrder.isNotEmpty) {
+      setState(() {
+        // Filter out any IDs that might not exist in _availableWidgets anymore
+        _userWidgetOrder = savedOrder.where((id) => _availableWidgets.containsKey(id)).toList();
+        // Add any new default widgets that aren't in the saved list
+        for (String defaultId in ['weather_card', 'quick_actions', 'news_feed', 'quick_notes', 'calendar_card', 'quick_links', 'daily_affirmation']) { // MODIFIED: Removed 'upcoming_events' from defaultId list
+          if (!_userWidgetOrder.contains(defaultId)) {
+            _userWidgetOrder.add(defaultId);
+          }
+        }
+      });
+    }
   }
 
-  // A hypothetical function to save the user's widget order to storage
-  void _saveUserWidgetOrder() {
-    // In a real app:
-    // SharedPreferences.getInstance().then((prefs) {
-    //   prefs.setStringList('widgetOrder', _userWidgetOrder);
-    // });
+  // MODIFIED: Save the user's widget order to SharedPreferences
+  Future<void> _saveUserWidgetOrder() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList('userWidgetOrder', _userWidgetOrder);
   }
 
   // Updates the greeting message based on time of day and current date
@@ -1069,12 +1412,12 @@ class _NativeWelcomePageState extends State<NativeWelcomePage> {
                     String displayName;
                     // Provide a user-friendly name for each widget ID
                     switch (widgetId) {
-                      case 'weather_card': displayName = 'At a Glance (Weather & Date)'; break;
+                      case 'weather_card': displayName = 'At a Glance (Weather & Date)'; break;;
                       case 'quick_actions': displayName = 'Quick Actions'; break;
                       case 'news_feed': displayName = 'Latest News'; break;
                       case 'quick_notes': displayName = 'Quick Notes'; break;
                       case 'calendar_card': displayName = 'My Calendar'; break; // Added Calendar display name
-                      case 'upcoming_events': displayName = 'Upcoming Events'; break; // New display name
+                    // 'upcoming_events': displayName = 'Upcoming Events'; break; // REMOVED
                       case 'quick_links': displayName = 'Quick Links'; break; // New display name
                       case 'daily_affirmation': displayName = 'Daily Affirmation'; break; // New display name
                       default: displayName = widgetId; // Fallback
@@ -1239,7 +1582,7 @@ class _NativeWelcomePageState extends State<NativeWelcomePage> {
                           final String item = _userWidgetOrder.removeAt(oldIndex);
                           _userWidgetOrder.insert(newIndex, item);
                         });
-                        _saveUserWidgetOrder(); // Save the new order after reorder
+                        _saveUserWidgetOrder(); // MODIFIED: Save the new order after reorder
                       },
                       itemBuilder: (BuildContext context, int index) {
                         final String widgetId = _userWidgetOrder[index];
@@ -1252,9 +1595,9 @@ class _NativeWelcomePageState extends State<NativeWelcomePage> {
                           case 'news_feed': displayName = 'Latest News'; break;
                           case 'quick_notes': displayName = 'Quick Notes'; break;
                           case 'calendar_card': displayName = 'My Calendar'; break;
-                          case 'upcoming_events': displayName = 'Upcoming Events'; break; // New display name
-                          case 'quick_links': displayName = 'Quick Links'; break; // New display name
-                          case 'daily_affirmation': displayName = 'Daily Affirmation'; break; // New display name
+                        // case 'upcoming_events': displayName = 'Upcoming Events'; break; // REMOVED
+                          case 'quick_links': displayName = 'Quick Links'; break;
+                          case 'daily_affirmation': displayName = 'Daily Affirmation'; break;
                           default: displayName = widgetId;
                         }
 
@@ -1321,7 +1664,7 @@ class _NativeWelcomePageState extends State<NativeWelcomePage> {
                       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
                       child: FilledButton.tonalIcon(
                         onPressed: _showAddWidgetDialog,
-                        icon: const Icon(Icons.add_card_rounded),
+                        icon: const Icon(Icons.add_box_rounded),
                         label: const Text('Add New Widget'),
                         style: FilledButton.styleFrom(
                           minimumSize: const Size.fromHeight(50),
