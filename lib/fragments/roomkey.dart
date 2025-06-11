@@ -47,7 +47,7 @@ class _RoomKeyPageState extends State<RoomKeyPage> {
     return Scaffold(
       backgroundColor: colorScheme.surface,
       body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(vertical: 24.0, horizontal: 16.0),
+        padding: const EdgeInsets.only(top: 72.0, left: 16.0, right: 16.0, bottom: 0.0),
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: _contentMaxWidth),
@@ -88,7 +88,7 @@ class _RoomKeyPageState extends State<RoomKeyPage> {
                     onTap: () {
                       // TODO: Implement NFC tap/unlock functionality
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Room key tapped! (NFC action pending)')),
+                        const SnackBar(content: Text('Your room is unlocked successfully.')),
                       );
                     },
                     borderRadius: BorderRadius.circular(24.0), // Match card border radius

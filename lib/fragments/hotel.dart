@@ -1,3 +1,5 @@
+// fragments/hotel.dart
+
 import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:flutter/gestures.dart'; // Import for GestureRecognizers
@@ -181,13 +183,56 @@ class _HotelPageState extends State<HotelPage> with TickerProviderStateMixin {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          // New Header Section
+          Padding(
+            padding: const EdgeInsets.only(top: 72.0, left: 16.0, right: 16.0, bottom: 0.0),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: _contentMaxWidth),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.hotel_rounded, // Icon for Hotel page
+                          size: 36,
+                          color: colorScheme.primary,
+                        ),
+                        const SizedBox(width: 12),
+                        Text(
+                          'Hotel', // Main title
+                          style: theme.textTheme.displaySmall?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: colorScheme.primary,
+                          ),
+                        ),
+                      ],
+                    ),
+                    Text(
+                      'Manage your hotel experience below.', // Subtitle
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    // NEW: Added a tiny SizedBox for a small margin
+                    const SizedBox(height: 8.0), // Adds a 4.0 pixel height space
+                  ],
+                ),
+              ),
+            ),
+          ),
+          // MODIFIED: Set top: false on SafeArea to remove implicit top padding
           SafeArea(
+            top: false, // Prevents SafeArea from adding top padding (since no AppBar is present)
             bottom: false,
             child: Material(
               color: colorScheme.surface,
               elevation: 0,
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+                // MODIFIED: Ensured vertical padding is 0.0 to bring tab bar closer to title
+                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 0.0),
                 child: Center(
                   child: ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: _contentMaxWidth),
