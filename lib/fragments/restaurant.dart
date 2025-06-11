@@ -103,75 +103,73 @@ class RestaurantPage extends StatelessWidget {
     return Scaffold(
       backgroundColor: colorScheme.surface, // Consistent background
       body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(vertical: 16.0), // Apply vertical padding to scroll view
+        // MODIFIED: Adjusted top padding to push content further down
+        padding: const EdgeInsets.only(top: 72.0, left: 16.0, right: 16.0), // Increased top padding
         child: Center( // Center the constrained content
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: _contentMaxWidth),
-            child: Padding( // Apply horizontal padding after constraining width
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // Header Section - styled like welcome page (Kept as requested)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 24.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.center, // Align icon and text vertically
-                          children: [
-                            Icon(
-                              Icons.restaurant_rounded,
-                              size: 36, // Slightly larger icon for displaySmall
-                              color: colorScheme.primary, // Icon color set to primary
-                            ),
-                            const SizedBox(width: 12),
-                            Text(
-                              'Food', // Main title
-                              style: theme.textTheme.displaySmall?.copyWith(
-                                fontWeight: FontWeight.bold,
-                                color: colorScheme.primary, // Title color set to primary
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        // Subtitle alignment changed, and text style changed
-                        Text(
-                          'Pick an action from below.', // Subtitle
-                          style: theme.textTheme.bodyMedium?.copyWith( // Made subtitle smaller
-                            color: colorScheme.onSurfaceVariant,
+            child: Column( // Removed redundant Padding widget here
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Header Section - styled like welcome page (Kept as requested)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 24.0), // Existing vertical padding
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.center, // Align icon and text vertically
+                        children: [
+                          Icon(
+                            Icons.restaurant_rounded,
+                            size: 36, // Slightly larger icon for displaySmall
+                            color: colorScheme.primary, // Icon color set to primary
                           ),
+                          const SizedBox(width: 12),
+                          Text(
+                            'Food', // Main title
+                            style: theme.textTheme.displaySmall?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: colorScheme.primary, // Title color set to primary
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      // Subtitle alignment changed, and text style changed
+                      Text(
+                        'Pick an action from below.', // Subtitle
+                        style: theme.textTheme.bodyMedium?.copyWith( // Made subtitle smaller
+                          color: colorScheme.onSurfaceVariant,
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 12.0), // Adjusted spacing before list items
+                ),
+                const SizedBox(height: 12.0), // Adjusted spacing before list items
 
-                  // Action Items - Now a refined list
-                  Column(
-                    children: List.generate(restaurantActions.length, (index) {
-                      final action = restaurantActions[index];
-                      // Add SizedBox for vertical spacing BETWEEN items
-                      return Padding(
-                        padding: EdgeInsets.only(bottom: index == restaurantActions.length - 1 ? 0.0 : 12.0), // Space after each, but not the last
-                        child: _buildRestaurantOption(
-                          context: context,
-                          icon: action['icon'] as IconData,
-                          label: action['label'] as String,
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(builder: (_) => action['page'] as Widget),
-                            );
-                          },
-                        ),
-                      );
-                    }),
-                  ),
-                ],
-              ),
+                // Action Items - Now a refined list
+                Column(
+                  children: List.generate(restaurantActions.length, (index) {
+                    final action = restaurantActions[index];
+                    // Add SizedBox for vertical spacing BETWEEN items
+                    return Padding(
+                      padding: EdgeInsets.only(bottom: index == restaurantActions.length - 1 ? 0.0 : 12.0), // Space after each, but not the last
+                      child: _buildRestaurantOption(
+                        context: context,
+                        icon: action['icon'] as IconData,
+                        label: action['label'] as String,
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => action['page'] as Widget),
+                          );
+                        },
+                      ),
+                    );
+                  }),
+                ),
+              ],
             ),
           ),
         ),

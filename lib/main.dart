@@ -5,21 +5,28 @@ import 'package:flutter/material.dart';
 // Import third-party packages
 import 'package:provider/provider.dart'; // State management
 import 'package:dynamic_color/dynamic_color.dart'; // For Material You dynamic colors (Android 12+)
-// InAppWebView might still be used by FullscreenMenuPage or other sub-pages
+// InAppWebView might still be used by other sub-pages, but FullscreenMenuPage is replaced
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:intl/intl.dart'; // For date formatting in native_welcome_page
+import 'package:url_launcher/url_launcher.dart'; // NEW: For canLaunchUrl, launchUrl, LaunchMode
 
 // Import your own app files for theming, helpers, and UI components
 import 'theme_provider.dart'; // Custom ThemeProvider managing theme state and preferences
 import 'colour_scheme.dart'; // Defines your app's color schemes
 import 'device_info_helper.dart'; // Helper for checking device capabilities like dynamic color support
-import 'fullscreen_menu_page.dart'; // Fullscreen menu page for app navigation
-import 'global_slide_transition_builder.dart'; // Custom page transitions
+import 'global_slide_transition_builder.dart'; // Custom page transitions (e.g., GlobalSlidePageTransitionsBuilder)
 
+// Import your fragments (pages)
 import 'fragments/home.dart';
 import 'fragments/restaurant.dart';
 import 'fragments/hotel.dart';
 import 'fragments/roomkey.dart';
+
+import 'settings/settings_page.dart';
+import 'helpcenter/helpcenter_page.dart';
+
+// NEW: Import the custom AnimatedFabMenu widget
+import 'widgets/animated_fab_menu.dart'; // Make sure this path is correct
 
 // For platform-specific imports (e.g. non-web platforms)
 import 'dart:io' show Platform;
@@ -166,7 +173,7 @@ class MyApp extends StatelessWidget {
             pageTransitionsTheme: PageTransitionsTheme(
               builders: {
                 for (final platform in TargetPlatform.values)
-                  platform: GlobalSlidePageTransitionsBuilder(),
+                  platform: GlobalSlidePageTransitionsBuilder(), // MODIFIED: Corrected to GlobalSlidePageTransitionsBuilder
               },
             ),
           ),
@@ -177,7 +184,7 @@ class MyApp extends StatelessWidget {
             pageTransitionsTheme: PageTransitionsTheme(
               builders: {
                 for (final platform in TargetPlatform.values)
-                  platform: GlobalSlidePageTransitionsBuilder(),
+                  platform: GlobalSlidePageTransitionsBuilder(), // MODIFIED: Corrected to GlobalSlidePageTransitionsBuilder
               },
             ),
           ),
@@ -201,13 +208,6 @@ class ResponsiveScaffold extends StatefulWidget {
 
 class _ResponsiveScaffoldState extends State<ResponsiveScaffold> {
   int _selectedIndex = 0; // Tracks currently selected navigation index
-
-  final List<String> _titles = [
-    'Dashboard',
-    'Food',
-    'Hotel',
-    'Room Key',
-  ];
 
   void _onItemTapped(int index) {
     setState(() {
@@ -237,8 +237,6 @@ class _ResponsiveScaffoldState extends State<ResponsiveScaffold> {
   Widget _buildCurrentPage() {
     switch (_selectedIndex) {
       case 0:
-      // Pass the _onItemTapped callback to NativeWelcomePage
-      // Removed 'const' because _onItemTapped is not a compile-time constant
         return NativeWelcomePage(onNavigateToTab: _onItemTapped);
       case 1:
         return const RestaurantPage();
@@ -256,30 +254,65 @@ class _ResponsiveScaffoldState extends State<ResponsiveScaffold> {
   Widget build(BuildContext context) {
     final bool isWideScreen = MediaQuery.of(context).size.width >= 600;
 
-    return Scaffold(
-      appBar: AppBar(
-        titleSpacing: 0,
-        title: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0),
-          child: Text(
-            _titles[_selectedIndex],
-            style: Theme.of(context).textTheme.titleLarge,
-          ),
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.menu_open_rounded),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => const FullscreenMenuPage(),
-                ),
+    // Define the MiniFabItems based on the original FullscreenMenuPage items
+    final List<MiniFabItem> menuFabItems = [
+      MiniFabItem(
+        icon: Icons.download_for_offline_rounded,
+        label: 'Download Menus',
+        onTap: () async {
+          const url = 'https://www.dropbox.com/scl/fo/7gmlnnjcau1np91ee83ht/h?rlkey=ifj506k3aal7ko7tfecy8oqyq&dl=0';
+          final uri = Uri.parse(url);
+          if (await canLaunchUrl(uri)) {
+            await launchUrl(uri, mode: LaunchMode.externalApplication);
+          } else {
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Could not launch $url')),
               );
-            },
-          ),
-        ],
+            }
+          }
+        },
       ),
+      MiniFabItem(
+        icon: Icons.settings_rounded,
+        label: 'Settings',
+        onTap: () {
+          if (context.mounted) {
+            Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsPage()));
+          }
+        },
+      ),
+      MiniFabItem(
+        icon: Icons.help_outline_rounded,
+        label: 'Help',
+        onTap: () {
+          if (context.mounted) {
+            Navigator.push(context, MaterialPageRoute(builder: (_) => const HelpcenterPage()));
+          }
+        },
+      ),
+      MiniFabItem(
+        icon: Icons.web_rounded,
+        label: 'Visit Blog',
+        onTap: () async {
+          const url = 'https://hienterprises.blogspot.com';
+          final uri = Uri.parse(url);
+          if (await canLaunchUrl(uri)) {
+            await launchUrl(uri, mode: LaunchMode.externalApplication);
+          } else {
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Could not launch $url')),
+              );
+            }
+          }
+        },
+      ),
+    ];
+
+
+    return Scaffold(
+      // MODIFIED: Removed AppBar entirely
       body: Row(
         children: [
           if (isWideScreen) _buildNavigationRail(isWideScreen),
@@ -289,6 +322,9 @@ class _ResponsiveScaffoldState extends State<ResponsiveScaffold> {
         ],
       ),
       bottomNavigationBar: isWideScreen ? null : _buildNavigationBar(),
+      // NEW: Floating Action Button that expands into mini-FABs for menu items
+      floatingActionButton: AnimatedFabMenu(fabItems: menuFabItems),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat, // Position at bottom right
     );
   }
 
