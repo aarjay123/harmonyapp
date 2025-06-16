@@ -71,13 +71,16 @@ class _NativeWelcomePageState extends State<NativeWelcomePage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.only(bottom: 12.0),
+            // MODIFIED: Reduced bottom padding from 12.0 to 8.0
+            padding: const EdgeInsets.only(bottom: 8.0),
             child: Text(
               'Quick Actions',
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
                 fontWeight: FontWeight.w600,
               ),
+              maxLines: 1, // Ensure title does not wrap
+              overflow: TextOverflow.ellipsis, // Add ellipsis if it overflows
             ),
           ),
           Row(
@@ -184,9 +187,11 @@ class _NativeWelcomePageState extends State<NativeWelcomePage> {
         onTap: onTap,
         borderRadius: BorderRadius.circular(16.0),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal:12.0, vertical: 20.0), // Internal padding
+          // MODIFIED: Reduced vertical padding from 20.0 to 16.0
+          padding: const EdgeInsets.symmetric(horizontal:12.0, vertical: 16.0), // Internal padding
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min, // MODIFIED: Ensure column takes minimum space
             children: [
               Icon(icon, size: 32, color: colorScheme.onPrimaryContainer),
               const SizedBox(height: 12), // Space between icon and text
@@ -194,6 +199,8 @@ class _NativeWelcomePageState extends State<NativeWelcomePage> {
                 label,
                 style: theme.textTheme.titleSmall?.copyWith(color: colorScheme.onPrimaryContainer, fontWeight: FontWeight.w600),
                 textAlign: TextAlign.center,
+                maxLines: 1, // Ensure label does not wrap
+                overflow: TextOverflow.ellipsis, // Add ellipsis if it overflows
               ),
             ],
           ),
@@ -386,33 +393,40 @@ class _NativeWelcomePageState extends State<NativeWelcomePage> {
               padding: EdgeInsets.only(top: 48.0), // Increased from 24.0 to 48.0
             ),
             SliverAppBar(
-              // MODIFIED: Adjusted expandedHeight to bring widgets closer to the title text
-              expandedHeight: _isInEditMode ? 80.0 : 100.0, // Reduced from 90/120 to 80/100
+              // MODIFIED: Adjusted expandedHeight to provide more space for the greeting text when Material 3 is off
+              expandedHeight: _isInEditMode ? 115.0 : 135.0, // Increased from 105/125 to 115/135
               flexibleSpace: FlexibleSpaceBar(
-                background: Padding(
-                  padding: const EdgeInsets.only(left: 16.0, right: 16.0, bottom: 16.0, top: 16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Dynamic greeting or "Edit Mode" text
-                      Text(
-                        _isInEditMode ? 'Edit Mode' : '$_greeting!',
-                        style: theme.textTheme.displaySmall?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          foreground: Paint()..shader = greetingGradientShader, // Apply gradient
-                        ),
-                      ),
-                      // "Welcome to Harmony!" subtitle, hidden in edit mode
-                      if (!_isInEditMode)
-                        const SizedBox(height: 4),
-                      if (!_isInEditMode)
+                background: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: _contentMaxWidth),
+                  child: Padding(
+                    padding: const EdgeInsets.only(left: 16.0, right: 16.0, bottom: 0.0, top: 16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start, // Keep left aligned
+                      children: [
+                        // Dynamic greeting or "Edit Mode" text
                         Text(
-                          'Welcome to Harmony!',
-                          style: theme.textTheme.headlineMedium?.copyWith(
-                            color: colorScheme.onSurfaceVariant,
+                          _isInEditMode ? 'Edit Mode' : '$_greeting!',
+                          style: theme.textTheme.displaySmall?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            foreground: Paint()..shader = greetingGradientShader, // Apply gradient
                           ),
+                          maxLines: 1, // Ensure greeting does not wrap
+                          overflow: TextOverflow.ellipsis, // Add ellipsis if it overflows
                         ),
-                    ],
+                        // "Welcome to Harmony!" subtitle, hidden in edit mode
+                        if (!_isInEditMode)
+                          const SizedBox(height: 4),
+                        if (!_isInEditMode)
+                          Text(
+                            'Welcome to Harmony!',
+                            style: theme.textTheme.headlineMedium?.copyWith(
+                              color: colorScheme.onSurfaceVariant,
+                            ),
+                            maxLines: 1, // Ensure subtitle does not wrap
+                            overflow: TextOverflow.ellipsis, // Add ellipsis if it overflows
+                          ),
+                      ],
+                    ),
                   ),
                 ),
               ),
