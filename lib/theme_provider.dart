@@ -6,26 +6,32 @@ class ThemeProvider extends ChangeNotifier {
   static const _prefDynamicColorKey = 'dynamic_color_enabled';
   static const _prefThemeModeKey = 'theme_mode';
   static const _prefSelectedSchemeKey = 'selected_scheme_key';
+  static const _prefUseMaterial3Key = 'use_material3'; // NEW: Preference key for Material 3 toggle
 
   bool _dynamicColorEnabled;
   ThemeMode _themeMode;
   String _selectedSchemeKey;
+  bool _useMaterial3; // NEW: Private variable to hold Material 3 state
 
   ThemeProvider({
     bool dynamicColorEnabled = false,
     ThemeMode themeMode = ThemeMode.system,
     String selectedSchemeKey = 'Default Blue', // default: must match a key from predefinedThemes
+    bool useMaterial3 = true, // NEW: Default to Material 3 enabled
   })  : _dynamicColorEnabled = dynamicColorEnabled,
         _themeMode = themeMode,
-        _selectedSchemeKey = selectedSchemeKey;
+        _selectedSchemeKey = selectedSchemeKey,
+        _useMaterial3 = useMaterial3; // NEW: Initialize _useMaterial3
 
   bool get dynamicColorEnabled => _dynamicColorEnabled;
   ThemeMode get themeMode => _themeMode;
   String get selectedSchemeKey => _selectedSchemeKey;
+  bool get useMaterial3 => _useMaterial3; // NEW: Getter for Material 3 state
 
   // Alias for convenience
   bool get useDynamicColor => dynamicColorEnabled;
-  void setUseDynamicColor(bool enabled) {
+  // This setter directly calls the private setter for consistency
+  setUseDynamicColor(bool enabled) {
     dynamicColorEnabled = enabled;
   }
 
@@ -57,6 +63,15 @@ class ThemeProvider extends ChangeNotifier {
     }
   }
 
+  // NEW: Setter for Material 3 toggle
+  set useMaterial3(bool value) {
+    if (_useMaterial3 != value) {
+      _useMaterial3 = value;
+      _saveUseMaterial3Pref(value); // Save the new preference
+      notifyListeners();
+    }
+  }
+
   ColorScheme get currentColorScheme {
     if (_dynamicColorEnabled) {
       // Example fallback when dynamic color is enabled
@@ -72,7 +87,7 @@ class ThemeProvider extends ChangeNotifier {
     _dynamicColorEnabled = prefs.getBool(_prefDynamicColorKey) ?? _dynamicColorEnabled;
 
     final themeModeIndex = prefs.getInt(_prefThemeModeKey);
-    if (themeModeIndex != null && themeModeIndex >= 0 && themeModeIndex <= 2) {
+    if (themeModeIndex != null && themeModeIndex >= 0 && themeModeIndex < ThemeMode.values.length) { // Corrected range check
       _themeMode = ThemeMode.values[themeModeIndex];
     }
 
@@ -83,6 +98,8 @@ class ThemeProvider extends ChangeNotifier {
       // fallback to first key in map if current key invalid
       _selectedSchemeKey = predefinedThemes.keys.first;
     }
+
+    _useMaterial3 = prefs.getBool(_prefUseMaterial3Key) ?? true; // NEW: Load Material 3 preference
 
     notifyListeners();
   }
@@ -100,5 +117,11 @@ class ThemeProvider extends ChangeNotifier {
   Future<void> _saveSelectedSchemeKey(String key) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_prefSelectedSchemeKey, key);
+  }
+
+  // NEW: Save Material 3 preference
+  Future<void> _saveUseMaterial3Pref(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_prefUseMaterial3Key, value);
   }
 }

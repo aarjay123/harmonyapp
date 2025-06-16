@@ -121,6 +121,19 @@ class MyApp extends StatelessWidget {
         final useDynamic =
             themeProvider.dynamicColorEnabled && dynamicColorSupported;
 
+        // Common CardThemeData definition based on Material 3 toggle
+        final CardThemeData commonCardTheme = CardThemeData( // Changed from CardTheme to CardThemeData
+          // Sharper corners for Material 2, softer for Material 3
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(themeProvider.useMaterial3 ? 12.0 : 8.0),
+          ),
+          // More pronounced shadow for Material 2, subtle for Material 3
+          elevation: themeProvider.useMaterial3 ? 1.0 : 4.0,
+          // You can also define the shadowColor if needed
+          // shadowColor: themeProvider.useMaterial3 ? null : Colors.black.withOpacity(0.3),
+        );
+
+
         if (useDynamic) {
           // If dynamic colors enabled and supported, build MaterialApp using them
           return MaterialApp(
@@ -128,9 +141,10 @@ class MyApp extends StatelessWidget {
             title: 'Harmony',
             themeMode: themeProvider.themeMode,
             theme: ThemeData(
-              useMaterial3: true, // Enable Material 3 design
+              useMaterial3: themeProvider.useMaterial3, // Enable Material 3 design
               colorScheme: lightDynamic ?? lightColorScheme, // Use dynamic or fallback light scheme
               textTheme: ThemeData.light().textTheme.apply(fontFamily: 'Outfit'), // Custom font
+              cardTheme: commonCardTheme, // Apply the common card theme
               pageTransitionsTheme: PageTransitionsTheme(
                 builders: {
                   // Apply custom slide transition on all platforms
@@ -140,9 +154,10 @@ class MyApp extends StatelessWidget {
               ),
             ),
             darkTheme: ThemeData(
-              useMaterial3: true,
+              useMaterial3: themeProvider.useMaterial3,
               colorScheme: darkDynamic ?? darkColorScheme, // Use dynamic or fallback dark scheme
               textTheme: ThemeData.dark().textTheme.apply(fontFamily: 'Outfit'),
+              cardTheme: commonCardTheme, // Apply the common card theme
               pageTransitionsTheme: PageTransitionsTheme(
                 builders: {
                   for (final platform in TargetPlatform.values)
@@ -167,9 +182,10 @@ class MyApp extends StatelessWidget {
           title: 'Harmony',
           themeMode: themeProvider.themeMode,
           theme: ThemeData(
-            useMaterial3: true,
+            useMaterial3: themeProvider.useMaterial3,
             colorScheme: lightScheme,
             textTheme: ThemeData.light().textTheme.apply(fontFamily: 'Outfit'),
+            cardTheme: commonCardTheme, // Apply the common card theme
             pageTransitionsTheme: PageTransitionsTheme(
               builders: {
                 for (final platform in TargetPlatform.values)
@@ -178,9 +194,10 @@ class MyApp extends StatelessWidget {
             ),
           ),
           darkTheme: ThemeData(
-            useMaterial3: true,
+            useMaterial3: themeProvider.useMaterial3,
             colorScheme: darkScheme,
             textTheme: ThemeData.dark().textTheme.apply(fontFamily: 'Outfit'),
+            cardTheme: commonCardTheme, // Apply the common card theme
             pageTransitionsTheme: PageTransitionsTheme(
               builders: {
                 for (final platform in TargetPlatform.values)
@@ -253,6 +270,8 @@ class _ResponsiveScaffoldState extends State<ResponsiveScaffold> {
   @override
   Widget build(BuildContext context) {
     final bool isWideScreen = MediaQuery.of(context).size.width >= 600;
+    final themeProvider = Provider.of<ThemeProvider>(context); // Get themeProvider here
+    final bool useMaterial3 = themeProvider.useMaterial3; // Get useMaterial3 state
 
     // Define the MiniFabItems based on the original FullscreenMenuPage items
     final List<MiniFabItem> menuFabItems = [
@@ -321,7 +340,8 @@ class _ResponsiveScaffoldState extends State<ResponsiveScaffold> {
           ),
         ],
       ),
-      bottomNavigationBar: isWideScreen ? null : _buildNavigationBar(),
+      // MODIFIED: Conditionally render NavigationBar or BottomNavigationBar
+      bottomNavigationBar: isWideScreen ? null : _buildNavigationBar(useMaterial3),
       // NEW: Floating Action Button that expands into mini-FABs for menu items
       floatingActionButton: AnimatedFabMenu(fabItems: menuFabItems),
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat, // Position at bottom right
@@ -348,25 +368,47 @@ class _ResponsiveScaffoldState extends State<ResponsiveScaffold> {
     );
   }
 
-  Widget _buildNavigationBar() {
-    return Theme(
-      data: Theme.of(context).copyWith(
-        navigationBarTheme: const NavigationBarThemeData(
-          labelBehavior: NavigationDestinationLabelBehavior.alwaysHide,
+  // MODIFIED: Now accepts a boolean for useMaterial3
+  Widget _buildNavigationBar(bool useMaterial3) {
+    if (useMaterial3) {
+      return Theme(
+        data: Theme.of(context).copyWith(
+          navigationBarTheme: const NavigationBarThemeData(
+            labelBehavior: NavigationDestinationLabelBehavior.alwaysHide,
+          ),
         ),
-      ),
-      child: NavigationBar(
-        selectedIndex: _selectedIndex,
-        onDestinationSelected: _onItemTapped,
-        height: 60,
-        elevation: 8,
-        destinations: const [
-          NavigationDestination(icon: Icon(Icons.dashboard_rounded), label: 'Dashboard'),
-          NavigationDestination(icon: Icon(Icons.restaurant_rounded), label: 'Food'),
-          NavigationDestination(icon: Icon(Icons.hotel_rounded), label: 'Hotel'),
-          NavigationDestination(icon: Icon(Icons.key_rounded), label: 'Room Key'),
+        child: NavigationBar(
+          selectedIndex: _selectedIndex,
+          onDestinationSelected: _onItemTapped,
+          height: 60,
+          elevation: 8,
+          destinations: const [
+            NavigationDestination(icon: Icon(Icons.dashboard_rounded), label: 'Dashboard'),
+            NavigationDestination(icon: Icon(Icons.restaurant_rounded), label: 'Food'),
+            NavigationDestination(icon: Icon(Icons.hotel_rounded), label: 'Hotel'),
+            NavigationDestination(icon: Icon(Icons.key_rounded), label: 'Room Key'),
+          ],
+        ),
+      );
+    } else {
+      // Material 2 style BottomNavigationBar
+      return BottomNavigationBar(
+        currentIndex: _selectedIndex,
+        onTap: _onItemTapped,
+        type: BottomNavigationBarType.fixed, // Ensures all items are visible and evenly spaced
+        selectedItemColor: Theme.of(context).colorScheme.primary, // Use primary color for selected item
+        unselectedItemColor: Theme.of(context).colorScheme.onSurfaceVariant, // Use onSurfaceVariant for unselected
+        selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold),
+        unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.normal),
+        showSelectedLabels: false, // Hide labels for a cleaner Material 2 icon-only look
+        showUnselectedLabels: false, // Hide labels for a cleaner Material 2 icon-only look
+        items: const [
+          BottomNavigationBarItem(icon: Icon(Icons.dashboard_rounded), label: 'Dashboard'),
+          BottomNavigationBarItem(icon: Icon(Icons.restaurant_rounded), label: 'Food'),
+          BottomNavigationBarItem(icon: Icon(Icons.hotel_rounded), label: 'Hotel'),
+          BottomNavigationBarItem(icon: Icon(Icons.key_rounded), label: 'Room Key'),
         ],
-      ),
-    );
+      );
+    }
   }
 }

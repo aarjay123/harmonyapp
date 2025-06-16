@@ -24,41 +24,60 @@ class AppearanceSettingsPage extends StatelessWidget {
       builder: (context, snapshot) {
         final bool supportsDynamicColor = snapshot.data ?? false;
         final bool dynamicColorEnabled = themeProvider.useDynamicColor;
+        final bool useMaterial3 = themeProvider.useMaterial3; // NEW: Get Material 3 state from ThemeProvider
 
         return SettingsPageTemplate(
           title: "Appearance",
           children: [
-            // --- Appearance Group ---
+            // --- Theme & Colours Group ---
             const SettingsGroupTitle(title: "Theme & Colours"),
             SettingsListItem(
               icon: Icons.brightness_6_rounded,
               label: "Theme",
               trailing: _buildThemeDropdown(context, themeProvider, colorScheme),
               isFirstItem: true,
+              // isLastItem is determined by next item's visibility
+              isLastItem: false, // This will never be the last item in the group
             ),
             SettingsListItem(
               icon: Icons.format_color_fill_rounded,
               label: "Use Dynamic Colour",
-              subtitle: "Uses colours from your wallpaper",
+              subtitle: "Uses colours from your wallpaper (Android 12+)", // Clarified subtitle
               trailing: Switch(
                 value: dynamicColorEnabled,
                 onChanged: supportsDynamicColor
                     ? (value) => themeProvider.setUseDynamicColor(value)
-                    : null,
+                    : null, // Disable switch if dynamic color not supported
                 activeColor: supportsDynamicColor
-                    ? null
-                    : colorScheme.onSurface.withOpacity(0.38),
+                    ? null // Use default active color if supported
+                    : colorScheme.onSurface.withOpacity(0.38), // Gray out if not supported
               ),
-              // Determine if this is the last item based on whether the next item is visible
+              // Determine if this is the last item based on whether Material 3 toggle is visible AND Dynamic Color is enabled
+              isLastItem: dynamicColorEnabled, // If dynamic color is enabled, this is the last item in this branch for static color picker
+            ),
+            // NEW: SettingsListItem for Material 3 Toggle
+            SettingsListItem(
+              icon: Icons.design_services_rounded, // Icon for design services
+              label: "Use Material 3 Design",
+              subtitle: "Modern UI elements and features",
+              trailing: Switch(
+                value: useMaterial3,
+                onChanged: (value) => themeProvider.useMaterial3 = value, // Use the setter from ThemeProvider
+                activeColor: null, // Use default active color
+              ),
+              // This is the last item if dynamic color is enabled (as App Colours is hidden),
+              // or it's the last item if dynamic color is disabled AND App Colours is visible (because App Colours is last).
+              // Simpler logic: if dynamicColorEnabled is true, then this is the last of the top 3 switches.
+              // If dynamicColorEnabled is false, then App Colours will be the last.
               isLastItem: dynamicColorEnabled,
             ),
-            // Conditionally show the color scheme picker
+            // Conditionally show the color scheme picker if dynamic color is NOT enabled
             if (!dynamicColorEnabled)
               SettingsListItem(
                 icon: Icons.color_lens_rounded,
                 label: "App Colours",
                 trailing: _buildSchemeDropdown(context, themeProvider, colorScheme),
-                isLastItem: true, // This is now definitively the last item
+                isLastItem: true, // This is always the last item in this conditional branch
               ),
           ],
         );
