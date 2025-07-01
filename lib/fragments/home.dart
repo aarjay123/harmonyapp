@@ -41,10 +41,11 @@ class _NativeWelcomePageState extends State<NativeWelcomePage> {
   bool _isInEditMode = false; // State variable for edit mode
 
   // Max width for the main content area on larger screens
-  static const double _contentMaxWidth = 768.0;
+  static const double _contentMaxWidth = 1200.0; // Increased for wider layouts
+  // Breakpoint for switching to two-column layout
+  static const double _twoColumnBreakpoint = 768.0;
 
   // List to store and manage the order of widget IDs
-  // This list defines which widgets are present and their default order.
   List<String> _userWidgetOrder = [
     'weather_card',
     'quick_actions',
@@ -56,22 +57,18 @@ class _NativeWelcomePageState extends State<NativeWelcomePage> {
   ];
 
   // Map to associate widget IDs with their respective builder functions.
-  // This allows dynamic creation and management of widgets based on their string ID.
   late final Map<String, Widget Function(BuildContext)> _availableWidgets;
 
   @override
   void initState() {
     super.initState();
-    _updateGreetingAndDate(); // Set initial greeting and date
-    // Initialize _availableWidgets BEFORE _loadUserWidgetOrder, as _loadUserWidgetOrder
-    // depends on _availableWidgets being populated to filter saved IDs.
+    _updateGreetingAndDate();
     _availableWidgets = {
-      'weather_card': (context) => AtAGlanceCard(formattedDate: _formattedDate), // Using extracted widget
-      'quick_actions': (context) => Column( // This is the 'Quick Actions' row
+      'weather_card': (context) => AtAGlanceCard(formattedDate: _formattedDate),
+      'quick_actions': (context) => Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            // MODIFIED: Reduced bottom padding from 12.0 to 8.0
             padding: const EdgeInsets.only(bottom: 8.0),
             child: Text(
               'Quick Actions',
@@ -79,8 +76,8 @@ class _NativeWelcomePageState extends State<NativeWelcomePage> {
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
                 fontWeight: FontWeight.w600,
               ),
-              maxLines: 1, // Ensure title does not wrap
-              overflow: TextOverflow.ellipsis, // Add ellipsis if it overflows
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
           Row(
@@ -90,51 +87,41 @@ class _NativeWelcomePageState extends State<NativeWelcomePage> {
                   context: context,
                   icon: Icons.restaurant_menu_rounded,
                   label: 'Order Food',
-                  onTap: () => widget.onNavigateToTab(1), // Navigates to a different tab
+                  onTap: () => widget.onNavigateToTab(1),
                 ),
               ),
-              const SizedBox(width: 16), // Horizontal space between action cards
+              const SizedBox(width: 16),
               Expanded(
                 child: _buildQuickActionCard(
                   context: context,
                   icon: Icons.hotel_rounded,
                   label: 'Book Stay',
-                  onTap: () => widget.onNavigateToTab(2), // Navigates to a different tab
+                  onTap: () => widget.onNavigateToTab(2),
                 ),
               ),
             ],
           ),
         ],
       ),
-      'news_feed': (context) => const NewsFeedCard(), // Using extracted widget
-      'quick_notes': (context) => const QuickNotesCard(), // Using extracted widget
-      'calendar_card': (context) => const CalendarCard(), // Using extracted widget
-      'quick_links': (context) => const QuickLinksCard(), // Using extracted widget
-      'daily_affirmation': (context) => const DailyAffirmationCard(), // Using extracted widget
+      'news_feed': (context) => const NewsFeedCard(),
+      'quick_notes': (context) => const QuickNotesCard(),
+      'calendar_card': (context) => const CalendarCard(),
+      'quick_links': (context) => const QuickLinksCard(),
+      'daily_affirmation': (context) => const DailyAffirmationCard(),
     };
-    _loadUserWidgetOrder(); // Load saved widget order from persistence
+    _loadUserWidgetOrder();
   }
 
-  /// Loads the user's customized widget order from SharedPreferences.
-  /// It also handles cases where new default widgets are added or old ones are removed.
   Future<void> _loadUserWidgetOrder() async {
     final prefs = await SharedPreferences.getInstance();
     final List<String>? savedOrder = prefs.getStringList('userWidgetOrder');
 
     if (savedOrder != null && savedOrder.isNotEmpty) {
       setState(() {
-        // Filter out any widget IDs from the saved order that no longer exist in _availableWidgets.
         _userWidgetOrder = savedOrder.where((id) => _availableWidgets.containsKey(id)).toList();
-
-        // Add any new default widgets that are not present in the loaded (and filtered) order.
         final List<String> currentDefaultWidgets = [
-          'weather_card',
-          'quick_actions',
-          'news_feed',
-          'quick_notes',
-          'calendar_card',
-          'quick_links',
-          'daily_affirmation',
+          'weather_card', 'quick_actions', 'news_feed', 'quick_notes',
+          'calendar_card', 'quick_links', 'daily_affirmation',
         ];
         for (String defaultId in currentDefaultWidgets) {
           if (!_userWidgetOrder.contains(defaultId)) {
@@ -145,62 +132,46 @@ class _NativeWelcomePageState extends State<NativeWelcomePage> {
     }
   }
 
-  /// Saves the current order of widgets to SharedPreferences for persistence.
   Future<void> _saveUserWidgetOrder() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setStringList('userWidgetOrder', _userWidgetOrder);
   }
 
-  /// Updates the greeting message based on the current time of day.
   void _updateGreetingAndDate() {
     final now = DateTime.now();
     final hour = now.hour;
-
-    if (hour < 12) {
-      _greeting = 'Good Morning';
-    } else if (hour < 17) {
-      _greeting = 'Good Afternoon';
-    } else {
-      _greeting = 'Good Evening';
-    }
-    _formattedDate = DateFormat('EEEE, d MMMM').format(now); // Format example: "Monday, 10 June"
-    if (mounted) setState(() {}); // Update UI if the widget is still active
+    if (hour < 12) _greeting = 'Good Morning';
+    else if (hour < 17) _greeting = 'Good Afternoon';
+    else _greeting = 'Good Evening';
+    _formattedDate = DateFormat('EEEE, d MMMM').format(now);
+    if (mounted) setState(() {});
   }
 
-
-  /// Helper function to build the quick action cards found in the 'quick_actions' row.
-  /// This remains in `home.dart` as its layout (Expanded cards in a Row) is specific
-  /// to the overall home page structure.
   Widget _buildQuickActionCard({
-    required BuildContext context,
-    required IconData icon,
-    required String label,
-    required VoidCallback onTap,
+    required BuildContext context, required IconData icon,
+    required String label, required VoidCallback onTap,
   }) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     return Card(
-      elevation: 0, // Flat card design
+      elevation: 0,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.0)),
-      color: colorScheme.primaryContainer, // Uses primary container color
+      color: colorScheme.primaryContainer,
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(16.0),
         child: Padding(
-          // MODIFIED: Reduced vertical padding from 20.0 to 16.0
-          padding: const EdgeInsets.symmetric(horizontal:12.0, vertical: 16.0), // Internal padding
+          padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 16.0),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
-            mainAxisSize: MainAxisSize.min, // MODIFIED: Ensure column takes minimum space
+            mainAxisSize: MainAxisSize.min,
             children: [
               Icon(icon, size: 32, color: colorScheme.onPrimaryContainer),
-              const SizedBox(height: 12), // Space between icon and text
+              const SizedBox(height: 12),
               Text(
                 label,
                 style: theme.textTheme.titleSmall?.copyWith(color: colorScheme.onPrimaryContainer, fontWeight: FontWeight.w600),
-                textAlign: TextAlign.center,
-                maxLines: 1, // Ensure label does not wrap
-                overflow: TextOverflow.ellipsis, // Add ellipsis if it overflows
+                textAlign: TextAlign.center, maxLines: 1, overflow: TextOverflow.ellipsis,
               ),
             ],
           ),
@@ -209,7 +180,7 @@ class _NativeWelcomePageState extends State<NativeWelcomePage> {
     );
   }
 
-  /// Shows a modal bottom sheet to allow users to add new widgets to the home page.
+  // MODIFIED: Restored the full implementation of the dialog methods.
   void _showAddWidgetDialog() {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
@@ -221,12 +192,10 @@ class _NativeWelcomePageState extends State<NativeWelcomePage> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(25.0)),
       ),
       builder: (BuildContext context) {
-        // Filter out widgets that are already on the home page
         final List<String> widgetsToAdd = _availableWidgets.keys
             .where((id) => !_userWidgetOrder.contains(id))
             .toList();
 
-        // Display a message if no more widgets are available to add
         if (widgetsToAdd.isEmpty) {
           return Padding(
             padding: const EdgeInsets.all(24.0),
@@ -242,7 +211,7 @@ class _NativeWelcomePageState extends State<NativeWelcomePage> {
                 ),
                 const SizedBox(height: 16),
                 FilledButton.tonal(
-                  onPressed: () => Navigator.pop(context), // Close the dialog
+                  onPressed: () => Navigator.pop(context),
                   child: const Text('Close'),
                 ),
               ],
@@ -250,7 +219,6 @@ class _NativeWelcomePageState extends State<NativeWelcomePage> {
           );
         }
 
-        // Display the list of available widgets to add
         return Padding(
           padding: const EdgeInsets.all(24.0),
           child: Column(
@@ -265,23 +233,22 @@ class _NativeWelcomePageState extends State<NativeWelcomePage> {
                 ),
               ),
               const SizedBox(height: 16),
-              Expanded( // Ensures the ListView takes available space in the bottom sheet
+              Expanded(
                 child: ListView.builder(
-                  shrinkWrap: true, // Allows ListView to take only as much space as its children
+                  shrinkWrap: true,
                   itemCount: widgetsToAdd.length,
                   itemBuilder: (context, index) {
                     final widgetId = widgetsToAdd[index];
                     String displayName;
-                    // Define user-friendly display names for each widget ID
                     switch (widgetId) {
-                      case 'weather_card': displayName = 'At a Glance (Weather & Date)'; break;
+                      case 'weather_card': displayName = 'At a Glance'; break;
                       case 'quick_actions': displayName = 'Quick Actions'; break;
                       case 'news_feed': displayName = 'Latest News'; break;
                       case 'quick_notes': displayName = 'Quick Notes'; break;
                       case 'calendar_card': displayName = 'My Calendar'; break;
                       case 'quick_links': displayName = 'Quick Links'; break;
                       case 'daily_affirmation': displayName = 'Daily Affirmation'; break;
-                      default: displayName = widgetId; // Fallback for unknown IDs
+                      default: displayName = widgetId;
                     }
 
                     return Card(
@@ -293,11 +260,9 @@ class _NativeWelcomePageState extends State<NativeWelcomePage> {
                         title: Text(displayName, style: theme.textTheme.bodyLarge?.copyWith(color: colorScheme.onSurfaceVariant)),
                         trailing: Icon(Icons.add_circle_outline, color: colorScheme.primary),
                         onTap: () {
-                          setState(() {
-                            _userWidgetOrder.add(widgetId); // Add widget to the user's order
-                          });
-                          _saveUserWidgetOrder(); // Save the new order
-                          Navigator.pop(context); // Close the dialog
+                          setState(() => _userWidgetOrder.add(widgetId));
+                          _saveUserWidgetOrder();
+                          Navigator.pop(context);
                         },
                       ),
                     );
@@ -311,7 +276,6 @@ class _NativeWelcomePageState extends State<NativeWelcomePage> {
     );
   }
 
-  /// Shows a confirmation dialog before removing a widget from the home page.
   void _showRemoveWidgetDialog(String widgetIdToRemove, String displayName) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
@@ -332,21 +296,14 @@ class _NativeWelcomePageState extends State<NativeWelcomePage> {
           ),
           actions: <Widget>[
             TextButton(
-              onPressed: () {
-                Navigator.of(dialogContext).pop(); // Dismiss dialog
-              },
-              child: Text(
-                'Cancel',
-                style: TextStyle(color: colorScheme.primary),
-              ),
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: Text('Cancel', style: TextStyle(color: colorScheme.primary)),
             ),
             FilledButton(
               onPressed: () {
-                setState(() {
-                  _userWidgetOrder.remove(widgetIdToRemove); // Remove widget from order
-                });
-                _saveUserWidgetOrder(); // Save the updated order
-                Navigator.of(dialogContext).pop(); // Dismiss dialog
+                setState(() => _userWidgetOrder.remove(widgetIdToRemove));
+                _saveUserWidgetOrder();
+                Navigator.of(dialogContext).pop();
               },
               style: FilledButton.styleFrom(
                 backgroundColor: colorScheme.error,
@@ -360,93 +317,164 @@ class _NativeWelcomePageState extends State<NativeWelcomePage> {
     );
   }
 
+  /// Builds the content for a single widget tile, including the remove button for edit mode.
+  Widget _buildWidgetTile(BuildContext context, String widgetId) {
+    final theme = Theme.of(context);
+    final widgetToDisplay = _availableWidgets[widgetId]?.call(context);
+
+    if (widgetToDisplay == null) {
+      return const SizedBox.shrink();
+    }
+
+    String displayName;
+    switch (widgetId) {
+      case 'weather_card': displayName = 'At a Glance'; break;
+      case 'quick_actions': displayName = 'Quick Actions'; break;
+      case 'news_feed': displayName = 'Latest News'; break;
+      case 'quick_notes': displayName = 'Quick Notes'; break;
+      case 'calendar_card': displayName = 'My Calendar'; break;
+      case 'quick_links': displayName = 'Quick Links'; break;
+      case 'daily_affirmation': displayName = 'Daily Affirmation'; break;
+      default: displayName = widgetId;
+    }
+
+    return Stack(
+      key: ValueKey(widgetId),
+      children: [
+        widgetToDisplay,
+        if (_isInEditMode)
+          Positioned(
+            top: 0,
+            right: 0,
+            child: GestureDetector(
+              onTap: () => _showRemoveWidgetDialog(widgetId, displayName),
+              child: CircleAvatar(
+                radius: 14,
+                backgroundColor: theme.colorScheme.errorContainer,
+                child: Icon(Icons.remove_rounded, size: 18, color: theme.colorScheme.onErrorContainer),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  /// Builds the single-column layout with reordering functionality for smaller screens.
+  Widget _buildSingleColumnLayout(BuildContext context) {
+    return ReorderableListView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      buildDefaultDragHandles: false,
+      itemCount: _userWidgetOrder.length,
+      onReorder: (int oldIndex, int newIndex) {
+        setState(() {
+          if (newIndex > oldIndex) newIndex -= 1;
+          final String item = _userWidgetOrder.removeAt(oldIndex);
+          _userWidgetOrder.insert(newIndex, item);
+        });
+        _saveUserWidgetOrder();
+      },
+      itemBuilder: (context, index) {
+        final widgetId = _userWidgetOrder[index];
+        final itemContent = Padding(
+          padding: const EdgeInsets.only(bottom: 24.0),
+          child: _buildWidgetTile(context, widgetId),
+        );
+
+        if (_isInEditMode) {
+          return ReorderableDelayedDragStartListener(
+            key: ValueKey(widgetId),
+            index: index,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(child: itemContent),
+                Padding(
+                  padding: const EdgeInsets.only(top: 8.0, left: 8.0),
+                  child: Icon(Icons.drag_handle_rounded, color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.5)),
+                ),
+              ],
+            ),
+          );
+        } else {
+          return SizedBox(key: ValueKey(widgetId), child: itemContent);
+        }
+      },
+    );
+  }
+
+  /// Builds the two-column dashboard layout for larger screens.
+  Widget _buildTwoColumnLayout(BuildContext context, BoxConstraints constraints) {
+    return Wrap(
+      spacing: 16.0,
+      runSpacing: 24.0,
+      children: _userWidgetOrder.map((widgetId) {
+        final itemWidth = (constraints.maxWidth / 2) - 8.0;
+        return SizedBox(
+          width: itemWidth,
+          child: _buildWidgetTile(context, widgetId),
+        );
+      }).toList(),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-
-    // Shader for the gradient greeting text
     final Shader greetingGradientShader = LinearGradient(
       colors: <Color>[colorScheme.primary, colorScheme.tertiary],
-      begin: Alignment.topLeft,
-      end: Alignment.bottomRight,
     ).createShader(const Rect.fromLTWH(0.0, 0.0, 300.0, 100.0));
 
     return Scaffold(
-      backgroundColor: colorScheme.surface, // Page background color
-      // Pull-to-refresh functionality for the whole page
+      backgroundColor: colorScheme.surface,
       body: RefreshIndicator(
-        onRefresh: () async {
-          // This refresh indicator only triggers its callback.
-          // Individual widgets (like NewsFeedCard or AtAGlanceCard) are responsible
-          // for refreshing their own data when they are initialized or via their own refresh buttons.
-          // For a global refresh, you'd typically use a state management solution (Provider, Riverpod, BLoC).
-          // For now, this just visually indicates a refresh, but doesn't force re-fetch on all children.
-          // The AtAGlanceCard implicitly handles its own refresh when its parent is rebuilt/state changed.
-        },
+        onRefresh: () async { /* ... */ },
         color: colorScheme.primary,
         backgroundColor: colorScheme.surfaceContainerHighest,
-        child: CustomScrollView( // Allows for flexible scrolling and app bar effects
+        child: CustomScrollView(
           slivers: [
-            // MODIFIED: Increased top padding to push content further down
-            const SliverPadding(
-              padding: EdgeInsets.only(top: 48.0), // Increased from 24.0 to 48.0
-            ),
             SliverAppBar(
-              // MODIFIED: Adjusted expandedHeight to provide more space for the greeting text when Material 3 is off
-              expandedHeight: _isInEditMode ? 115.0 : 135.0, // Increased from 105/125 to 115/135
+              expandedHeight: _isInEditMode ? 120.0 : 150.0,
               flexibleSpace: FlexibleSpaceBar(
-                background: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: _contentMaxWidth),
-                  child: Padding(
-                    padding: const EdgeInsets.only(left: 16.0, right: 16.0, bottom: 0.0, top: 16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start, // Keep left aligned
-                      children: [
-                        // Dynamic greeting or "Edit Mode" text
-                        Text(
-                          _isInEditMode ? 'Edit Mode' : '$_greeting!',
-                          style: theme.textTheme.displaySmall?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            foreground: Paint()..shader = greetingGradientShader, // Apply gradient
-                          ),
-                          maxLines: 1, // Ensure greeting does not wrap
-                          overflow: TextOverflow.ellipsis, // Add ellipsis if it overflows
+                background: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _isInEditMode ? 'Edit Mode' : '$_greeting!',
+                        style: theme.textTheme.displaySmall?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          foreground: Paint()..shader = greetingGradientShader,
                         ),
-                        // "Welcome to Harmony!" subtitle, hidden in edit mode
-                        if (!_isInEditMode)
-                          const SizedBox(height: 4),
-                        if (!_isInEditMode)
-                          Text(
-                            'Welcome to Harmony!',
-                            style: theme.textTheme.headlineMedium?.copyWith(
-                              color: colorScheme.onSurfaceVariant,
-                            ),
-                            maxLines: 1, // Ensure subtitle does not wrap
-                            overflow: TextOverflow.ellipsis, // Add ellipsis if it overflows
+                        maxLines: 1, overflow: TextOverflow.ellipsis,
+                      ),
+                      if (!_isInEditMode) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          'Welcome to Harmony!',
+                          style: theme.textTheme.headlineMedium?.copyWith(
+                            color: colorScheme.onSurfaceVariant,
                           ),
+                          maxLines: 1, overflow: TextOverflow.ellipsis,
+                        ),
                       ],
-                    ),
+                    ],
                   ),
                 ),
               ),
-              backgroundColor: colorScheme.surface, // App bar background
-              elevation: 0, // No shadow for the app bar
-              pinned: false, // App bar scrolls away with the content
-              // Actions in the app bar (only visible in edit mode)
-              actions: _isInEditMode
-                  ? [
+              backgroundColor: colorScheme.surface,
+              elevation: 0,
+              pinned: false,
+              actions: _isInEditMode ? [
                 IconButton(
                   icon: Icon(Icons.done_rounded, color: colorScheme.primary),
-                  onPressed: () {
-                    setState(() {
-                      _isInEditMode = false; // Exit edit mode
-                    });
-                  },
+                  onPressed: () => setState(() => _isInEditMode = false),
                   tooltip: 'Done Editing',
                 ),
-              ]
-                  : null, // No actions when not in edit mode
+              ] : null,
             ),
             SliverPadding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -454,106 +482,29 @@ class _NativeWelcomePageState extends State<NativeWelcomePage> {
                 child: Center(
                   child: ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: _contentMaxWidth),
-                    child: ReorderableListView.builder(
-                      shrinkWrap: true, // Prevents excessive height
-                      physics: const NeverScrollableScrollPhysics(), // Handled by CustomScrollView
-                      buildDefaultDragHandles: false, // Crucial: Disable default drag handles to use custom ones
-                      itemCount: _userWidgetOrder.length,
-                      onReorder: (int oldIndex, int newIndex) {
-                        setState(() {
-                          if (newIndex > oldIndex) {
-                            newIndex -= 1;
-                          }
-                          final String item = _userWidgetOrder.removeAt(oldIndex);
-                          _userWidgetOrder.insert(newIndex, item);
-                        });
-                        _saveUserWidgetOrder(); // Save the new order after reorder
-                      },
-                      itemBuilder: (BuildContext context, int index) {
-                        final String widgetId = _userWidgetOrder[index];
-                        final Widget? widgetToDisplay = _availableWidgets[widgetId]?.call(context);
-                        String displayName;
-                        // Map widget IDs to user-friendly names for dialogs/feedback
-                        switch (widgetId) {
-                          case 'weather_card': displayName = 'At a Glance (Weather & Date)'; break;
-                          case 'quick_actions': displayName = 'Quick Actions'; break;
-                          case 'news_feed': displayName = 'Latest News'; break;
-                          case 'quick_notes': displayName = 'Quick Notes'; break;
-                          case 'calendar_card': displayName = 'My Calendar'; break;
-                          case 'quick_links': displayName = 'Quick Links'; break;
-                          case 'daily_affirmation': displayName = 'Daily Affirmation'; break;
-                          default: displayName = widgetId;
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        if (constraints.maxWidth >= _twoColumnBreakpoint) {
+                          return _buildTwoColumnLayout(context, constraints);
+                        } else {
+                          return _buildSingleColumnLayout(context);
                         }
-
-                        if (widgetToDisplay != null) {
-                          Widget itemContent = Padding(
-                            padding: const EdgeInsets.only(bottom: 24.0), // Space between widgets
-                            child: Stack(
-                              children: [
-                                widgetToDisplay, // The actual widget content
-                                // Remove button, visible only in edit mode
-                                if (_isInEditMode)
-                                  Positioned(
-                                    top: 0,
-                                    right: 0,
-                                    child: GestureDetector(
-                                      onTap: () {
-                                        _showRemoveWidgetDialog(widgetId, displayName);
-                                      },
-                                      child: CircleAvatar(
-                                        radius: 14,
-                                        backgroundColor: theme.colorScheme.errorContainer,
-                                        child: Icon(Icons.remove_rounded, size: 18, color: theme.colorScheme.onErrorContainer),
-                                      ),
-                                    ),
-                                  ),
-                              ],
-                            ),
-                          );
-
-                          // Wrap widget content for reordering and drag handle only in edit mode
-                          if (_isInEditMode) {
-                            return ReorderableDelayedDragStartListener(
-                              key: ValueKey(widgetId), // Unique key is required for ReorderableListView
-                              index: index,
-                              child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.start, // Align to top
-                                children: [
-                                  Expanded(child: itemContent), // Widget content takes most space
-                                  // Custom drag handle, visible only in edit mode
-                                  Padding(
-                                    padding: const EdgeInsets.only(top: 8.0, left: 8.0),
-                                    child: Icon(Icons.drag_handle_rounded, color: theme.colorScheme.onSurfaceVariant.withOpacity(0.5)),
-                                  ),
-                                ],
-                              ),
-                            );
-                          } else {
-                            // When not in edit mode, display content without drag functionality
-                            return SizedBox( // Still requires a key for ListView's internal management
-                              key: ValueKey(widgetId),
-                              child: itemContent,
-                            );
-                          }
-                        }
-                        return const SizedBox.shrink(); // Return an empty widget if ID is not found
                       },
                     ),
                   ),
                 ),
               ),
             ),
-            // "Add New Widget" button, visible only in edit mode
             if (_isInEditMode)
               SliverToBoxAdapter(
                 child: Center(
                   child: ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: _contentMaxWidth),
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                      padding: const EdgeInsets.fromLTRB(16.0, 0, 16.0, 8.0),
                       child: FilledButton.tonalIcon(
                         onPressed: _showAddWidgetDialog,
-                        icon: const Icon(Icons.add_box_rounded), // Icon for adding
+                        icon: const Icon(Icons.add_box_rounded),
                         label: const Text('Add New Widget'),
                         style: FilledButton.styleFrom(
                           minimumSize: const Size.fromHeight(50),
@@ -564,24 +515,19 @@ class _NativeWelcomePageState extends State<NativeWelcomePage> {
                   ),
                 ),
               ),
-            // Button to toggle edit mode, always visible at the bottom of the scroll view
             SliverToBoxAdapter(
               child: Center(
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: _contentMaxWidth),
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 24.0),
+                    padding: const EdgeInsets.fromLTRB(16.0, 24.0, 16.0, 24.0),
                     child: FilledButton.tonal(
-                      onPressed: () {
-                        setState(() {
-                          _isInEditMode = !_isInEditMode; // Toggle edit mode state
-                        });
-                      },
+                      onPressed: () => setState(() => _isInEditMode = !_isInEditMode),
                       style: FilledButton.styleFrom(
                         minimumSize: const Size.fromHeight(50),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0)),
                       ),
-                      child: Text(_isInEditMode ? 'Exit Edit Mode' : 'Edit Widgets'), // Dynamic button text
+                      child: Text(_isInEditMode ? 'Exit Edit Mode' : 'Edit Widgets'),
                     ),
                   ),
                 ),
