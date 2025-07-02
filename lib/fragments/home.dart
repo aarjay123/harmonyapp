@@ -1,7 +1,6 @@
-// fragments/home.dart
-
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart'; // For date formatting
+import 'package:reorderable_grid_view/reorderable_grid_view.dart'; // For the reorderable grid
 import 'package:shared_preferences/shared_preferences.dart'; // For local data persistence
 
 // IMPORTANT: Ensure your pubspec.yaml includes:
@@ -14,6 +13,7 @@ dependencies:
   geolocator: ^11.0.0
   url_launcher: ^6.2.2
   shared_preferences: ^2.2.0
+  reorderable_grid_view: ^2.2.6 # Added for two-column reordering
 */
 
 // --- Import Custom Widgets and Models ---
@@ -24,8 +24,22 @@ import '../widgets/quick_notes_card.dart'; // Import the extracted QuickNotesCar
 import '../widgets/calendar_card.dart'; // Import the extracted CalendarCard
 import '../widgets/quick_links_card.dart'; // Import the extracted QuickLinksCard
 import '../widgets/daily_affirmation_card.dart'; // Import the extracted DailyAffirmationCard
+import '../widgets/quick_actions_card.dart'; // Import the new QuickActionsCard
 // ----------------------------------------
 
+/// Model to hold metadata for each dashboard widget.
+/// This simplifies management by removing the need for switch statements.
+class DashboardWidgetModel {
+  final String id;
+  final String displayName;
+  final WidgetBuilder builder;
+
+  DashboardWidgetModel({
+    required this.id,
+    required this.displayName,
+    required this.builder,
+  });
+}
 
 class NativeWelcomePage extends StatefulWidget {
   final Function(int) onNavigateToTab;
@@ -38,92 +52,77 @@ class NativeWelcomePage extends StatefulWidget {
 class _NativeWelcomePageState extends State<NativeWelcomePage> {
   String _greeting = '';
   String _formattedDate = '';
-  bool _isInEditMode = false; // State variable for edit mode
+  bool _isInEditMode = false;
 
-  // Max width for the main content area on larger screens
-  static const double _contentMaxWidth = 1200.0; // Increased for wider layouts
-  // Breakpoint for switching to two-column layout
+  static const double _contentMaxWidth = 1200.0;
   static const double _twoColumnBreakpoint = 768.0;
 
-  // List to store and manage the order of widget IDs
-  List<String> _userWidgetOrder = [
-    'weather_card',
-    'quick_actions',
-    'news_feed',
-    'quick_notes',
-    'calendar_card',
-    'quick_links',
-    'daily_affirmation',
-  ];
+  List<String> _userWidgetOrder = [];
 
-  // Map to associate widget IDs with their respective builder functions.
-  late final Map<String, Widget Function(BuildContext)> _availableWidgets;
+  // REFACTORED: Now a map of widget IDs to a model containing all widget info.
+  late final Map<String, DashboardWidgetModel> _availableWidgets;
 
   @override
   void initState() {
     super.initState();
     _updateGreetingAndDate();
+
+    // REFACTORED: Widget definitions now use the DashboardWidgetModel.
     _availableWidgets = {
-      'weather_card': (context) => AtAGlanceCard(formattedDate: _formattedDate),
-      'quick_actions': (context) => Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.only(bottom: 8.0),
-            child: Text(
-              'Quick Actions',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-                fontWeight: FontWeight.w600,
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-          Row(
-            children: [
-              Expanded(
-                child: _buildQuickActionCard(
-                  context: context,
-                  icon: Icons.restaurant_menu_rounded,
-                  label: 'Order Food',
-                  onTap: () => widget.onNavigateToTab(1),
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: _buildQuickActionCard(
-                  context: context,
-                  icon: Icons.hotel_rounded,
-                  label: 'Book Stay',
-                  onTap: () => widget.onNavigateToTab(2),
-                ),
-              ),
-            ],
-          ),
-        ],
+      'weather_card': DashboardWidgetModel(
+        id: 'weather_card',
+        displayName: 'At a Glance',
+        builder: (context) => AtAGlanceCard(formattedDate: _formattedDate),
       ),
-      'news_feed': (context) => const NewsFeedCard(),
-      'quick_notes': (context) => const QuickNotesCard(),
-      'calendar_card': (context) => const CalendarCard(),
-      'quick_links': (context) => const QuickLinksCard(),
-      'daily_affirmation': (context) => const DailyAffirmationCard(),
+      // UPDATED: Replaced inline implementation with the new QuickActionsCard widget.
+      'quick_actions': DashboardWidgetModel(
+        id: 'quick_actions',
+        displayName: 'Quick Actions',
+        builder: (context) => QuickActionsCard(onNavigateToTab: widget.onNavigateToTab),
+      ),
+      'news_feed': DashboardWidgetModel(
+        id: 'news_feed',
+        displayName: 'Latest News',
+        builder: (context) => const NewsFeedCard(),
+      ),
+      'quick_notes': DashboardWidgetModel(
+        id: 'quick_notes',
+        displayName: 'Quick Notes',
+        builder: (context) => const QuickNotesCard(),
+      ),
+      'calendar_card': DashboardWidgetModel(
+        id: 'calendar_card',
+        displayName: 'My Calendar',
+        builder: (context) => const CalendarCard(),
+      ),
+      'quick_links': DashboardWidgetModel(
+        id: 'quick_links',
+        displayName: 'Quick Links',
+        builder: (context) => const QuickLinksCard(),
+      ),
+      'daily_affirmation': DashboardWidgetModel(
+        id: 'daily_affirmation',
+        displayName: 'Daily Affirmation',
+        builder: (context) => const DailyAffirmationCard(),
+      ),
     };
     _loadUserWidgetOrder();
   }
 
   Future<void> _loadUserWidgetOrder() async {
     final prefs = await SharedPreferences.getInstance();
-    final List<String>? savedOrder = prefs.getStringList('userWidgetOrder');
+    List<String>? savedOrder = prefs.getStringList('userWidgetOrder');
 
-    if (savedOrder != null && savedOrder.isNotEmpty) {
+    if (savedOrder == null || savedOrder.isEmpty) {
+      // If no order is saved, use the default order from available widgets
+      savedOrder = _availableWidgets.keys.toList();
+    }
+
+    if (mounted) {
       setState(() {
-        _userWidgetOrder = savedOrder.where((id) => _availableWidgets.containsKey(id)).toList();
-        final List<String> currentDefaultWidgets = [
-          'weather_card', 'quick_actions', 'news_feed', 'quick_notes',
-          'calendar_card', 'quick_links', 'daily_affirmation',
-        ];
-        for (String defaultId in currentDefaultWidgets) {
+        // Ensure all saved widgets still exist and add any new default widgets.
+        _userWidgetOrder = savedOrder!.where((id) => _availableWidgets.containsKey(id)).toList();
+        for (String defaultId in _availableWidgets.keys) {
           if (!_userWidgetOrder.contains(defaultId)) {
             _userWidgetOrder.add(defaultId);
           }
@@ -147,40 +146,9 @@ class _NativeWelcomePageState extends State<NativeWelcomePage> {
     if (mounted) setState(() {});
   }
 
-  Widget _buildQuickActionCard({
-    required BuildContext context, required IconData icon,
-    required String label, required VoidCallback onTap,
-  }) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.0)),
-      color: colorScheme.primaryContainer,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16.0),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 16.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, size: 32, color: colorScheme.onPrimaryContainer),
-              const SizedBox(height: 12),
-              Text(
-                label,
-                style: theme.textTheme.titleSmall?.copyWith(color: colorScheme.onPrimaryContainer, fontWeight: FontWeight.w600),
-                textAlign: TextAlign.center, maxLines: 1, overflow: TextOverflow.ellipsis,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
+  // This function is no longer needed here as it's moved to quick_actions_card.dart
+  // Widget _buildQuickActionCard(...) { ... }
 
-  // MODIFIED: Restored the full implementation of the dialog methods.
   void _showAddWidgetDialog() {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
@@ -192,8 +160,8 @@ class _NativeWelcomePageState extends State<NativeWelcomePage> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(25.0)),
       ),
       builder: (BuildContext context) {
-        final List<String> widgetsToAdd = _availableWidgets.keys
-            .where((id) => !_userWidgetOrder.contains(id))
+        final List<DashboardWidgetModel> widgetsToAdd = _availableWidgets.values
+            .where((model) => !_userWidgetOrder.contains(model.id))
             .toList();
 
         if (widgetsToAdd.isEmpty) {
@@ -238,29 +206,17 @@ class _NativeWelcomePageState extends State<NativeWelcomePage> {
                   shrinkWrap: true,
                   itemCount: widgetsToAdd.length,
                   itemBuilder: (context, index) {
-                    final widgetId = widgetsToAdd[index];
-                    String displayName;
-                    switch (widgetId) {
-                      case 'weather_card': displayName = 'At a Glance'; break;
-                      case 'quick_actions': displayName = 'Quick Actions'; break;
-                      case 'news_feed': displayName = 'Latest News'; break;
-                      case 'quick_notes': displayName = 'Quick Notes'; break;
-                      case 'calendar_card': displayName = 'My Calendar'; break;
-                      case 'quick_links': displayName = 'Quick Links'; break;
-                      case 'daily_affirmation': displayName = 'Daily Affirmation'; break;
-                      default: displayName = widgetId;
-                    }
-
+                    final widgetModel = widgetsToAdd[index];
                     return Card(
                       margin: const EdgeInsets.symmetric(vertical: 8.0),
                       color: colorScheme.surfaceVariant,
                       elevation: 0,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0)),
                       child: ListTile(
-                        title: Text(displayName, style: theme.textTheme.bodyLarge?.copyWith(color: colorScheme.onSurfaceVariant)),
+                        title: Text(widgetModel.displayName, style: theme.textTheme.bodyLarge?.copyWith(color: colorScheme.onSurfaceVariant)),
                         trailing: Icon(Icons.add_circle_outline, color: colorScheme.primary),
                         onTap: () {
-                          setState(() => _userWidgetOrder.add(widgetId));
+                          setState(() => _userWidgetOrder.add(widgetModel.id));
                           _saveUserWidgetOrder();
                           Navigator.pop(context);
                         },
@@ -320,41 +276,36 @@ class _NativeWelcomePageState extends State<NativeWelcomePage> {
   /// Builds the content for a single widget tile, including the remove button for edit mode.
   Widget _buildWidgetTile(BuildContext context, String widgetId) {
     final theme = Theme.of(context);
-    final widgetToDisplay = _availableWidgets[widgetId]?.call(context);
+    final model = _availableWidgets[widgetId];
 
-    if (widgetToDisplay == null) {
+    if (model == null) {
       return const SizedBox.shrink();
-    }
-
-    String displayName;
-    switch (widgetId) {
-      case 'weather_card': displayName = 'At a Glance'; break;
-      case 'quick_actions': displayName = 'Quick Actions'; break;
-      case 'news_feed': displayName = 'Latest News'; break;
-      case 'quick_notes': displayName = 'Quick Notes'; break;
-      case 'calendar_card': displayName = 'My Calendar'; break;
-      case 'quick_links': displayName = 'Quick Links'; break;
-      case 'daily_affirmation': displayName = 'Daily Affirmation'; break;
-      default: displayName = widgetId;
     }
 
     return Stack(
       key: ValueKey(widgetId),
+      clipBehavior: Clip.none, // Allow the remove button to overflow the card bounds slightly
       children: [
-        widgetToDisplay,
-        if (_isInEditMode)
-          Positioned(
-            top: 0,
-            right: 0,
-            child: GestureDetector(
-              onTap: () => _showRemoveWidgetDialog(widgetId, displayName),
-              child: CircleAvatar(
-                radius: 14,
-                backgroundColor: theme.colorScheme.errorContainer,
-                child: Icon(Icons.remove_rounded, size: 18, color: theme.colorScheme.onErrorContainer),
+        model.builder(context),
+        Positioned(
+          top: -4,
+          right: -4,
+          child: AnimatedOpacity(
+            opacity: _isInEditMode ? 1.0 : 0.0,
+            duration: const Duration(milliseconds: 250),
+            child: IgnorePointer(
+              ignoring: !_isInEditMode,
+              child: GestureDetector(
+                onTap: () => _showRemoveWidgetDialog(model.id, model.displayName),
+                child: CircleAvatar(
+                  radius: 14,
+                  backgroundColor: theme.colorScheme.errorContainer,
+                  child: Icon(Icons.remove_rounded, size: 18, color: theme.colorScheme.onErrorContainer),
+                ),
               ),
             ),
           ),
+        ),
       ],
     );
   }
@@ -389,9 +340,13 @@ class _NativeWelcomePageState extends State<NativeWelcomePage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Expanded(child: itemContent),
-                Padding(
-                  padding: const EdgeInsets.only(top: 8.0, left: 8.0),
-                  child: Icon(Icons.drag_handle_rounded, color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.5)),
+                AnimatedOpacity(
+                  opacity: _isInEditMode ? 1.0 : 0.0,
+                  duration: const Duration(milliseconds: 300),
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 8.0, left: 8.0),
+                    child: Icon(Icons.drag_handle_rounded, color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.5)),
+                  ),
                 ),
               ],
             ),
@@ -405,16 +360,76 @@ class _NativeWelcomePageState extends State<NativeWelcomePage> {
 
   /// Builds the two-column dashboard layout for larger screens.
   Widget _buildTwoColumnLayout(BuildContext context, BoxConstraints constraints) {
-    return Wrap(
-      spacing: 16.0,
-      runSpacing: 24.0,
-      children: _userWidgetOrder.map((widgetId) {
-        final itemWidth = (constraints.maxWidth / 2) - 8.0;
+    if (!_isInEditMode) {
+      return Wrap(
+        spacing: 16.0,
+        runSpacing: 24.0,
+        children: _userWidgetOrder.map((widgetId) {
+          final itemWidth = (constraints.maxWidth / 2) - 8.0;
+          return SizedBox(
+            width: itemWidth,
+            child: _buildWidgetTile(context, widgetId),
+          );
+        }).toList(),
+      );
+    }
+
+    return ReorderableGridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        crossAxisSpacing: 16.0,
+        mainAxisSpacing: 24.0,
+        childAspectRatio: 0.9,
+      ),
+      itemCount: _userWidgetOrder.length,
+      itemBuilder: (context, index) {
+        final widgetId = _userWidgetOrder[index];
         return SizedBox(
-          width: itemWidth,
+          key: ValueKey(widgetId),
           child: _buildWidgetTile(context, widgetId),
         );
-      }).toList(),
+      },
+      onReorder: (int oldIndex, int newIndex) {
+        setState(() {
+          final String item = _userWidgetOrder.removeAt(oldIndex);
+          _userWidgetOrder.insert(newIndex, item);
+        });
+        _saveUserWidgetOrder();
+      },
+    );
+  }
+
+  /// Builds an "empty state" UI when no widgets are present.
+  Widget _buildEmptyState(BuildContext context) {
+    final theme = Theme.of(context);
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 64.0, horizontal: 32.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.widgets_outlined,
+              size: 64,
+              color: theme.colorScheme.onSurfaceVariant.withOpacity(0.5),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              'Your dashboard is empty',
+              style: theme.textTheme.headlineSmall?.copyWith(color: theme.colorScheme.onSurface),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Enter edit mode to add new widgets and customize your view.',
+              style: theme.textTheme.bodyLarge?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -429,7 +444,11 @@ class _NativeWelcomePageState extends State<NativeWelcomePage> {
     return Scaffold(
       backgroundColor: colorScheme.surface,
       body: RefreshIndicator(
-        onRefresh: () async { /* ... */ },
+        onRefresh: () async {
+          setState(() {
+            _updateGreetingAndDate();
+          });
+        },
         color: colorScheme.primary,
         backgroundColor: colorScheme.surfaceContainerHighest,
         child: CustomScrollView(
@@ -438,9 +457,9 @@ class _NativeWelcomePageState extends State<NativeWelcomePage> {
               expandedHeight: _isInEditMode ? 120.0 : 150.0,
               flexibleSpace: FlexibleSpaceBar(
                 background: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  padding: const EdgeInsets.fromLTRB(16.0, 0, 16.0, 16.0),
                   child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                    mainAxisAlignment: MainAxisAlignment.end,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
@@ -484,6 +503,10 @@ class _NativeWelcomePageState extends State<NativeWelcomePage> {
                     constraints: const BoxConstraints(maxWidth: _contentMaxWidth),
                     child: LayoutBuilder(
                       builder: (context, constraints) {
+                        if (_userWidgetOrder.isEmpty) {
+                          return _buildEmptyState(context);
+                        }
+
                         if (constraints.maxWidth >= _twoColumnBreakpoint) {
                           return _buildTwoColumnLayout(context, constraints);
                         } else {
