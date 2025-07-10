@@ -19,6 +19,7 @@ import 'global_slide_transition_builder.dart'; // Custom page transitions (e.g.,
 // Import your fragments (pages)
 import 'fragments/home.dart';
 import 'fragments/restaurant.dart';
+import 'fragments/rewards_page.dart';
 import 'fragments/hotel.dart';
 import 'fragments/roomkey.dart';
 
@@ -258,8 +259,10 @@ class _ResponsiveScaffoldState extends State<ResponsiveScaffold> {
       case 1:
         return const RestaurantPage();
       case 2:
-        return const HotelPage();
+        return const RewardsPage();
       case 3:
+        return const HotelPage();
+      case 4:
         return const RoomKeyPage();
       default:
         return const Center(child: Text("Page not found."));
@@ -361,6 +364,8 @@ class _ResponsiveScaffoldState extends State<ResponsiveScaffold> {
         NavigationRailDestination(
             icon: Icon(Icons.restaurant_rounded), label: Text('Food')),
         NavigationRailDestination(
+            icon: Icon(Icons.stars_rounded), label: Text('Rewards')),
+        NavigationRailDestination(
             icon: Icon(Icons.hotel_rounded), label: Text('Hotel')),
         NavigationRailDestination(
             icon: Icon(Icons.key_rounded), label: Text('Room Key')),
@@ -385,6 +390,7 @@ class _ResponsiveScaffoldState extends State<ResponsiveScaffold> {
           destinations: const [
             NavigationDestination(icon: Icon(Icons.dashboard_rounded), label: 'Dashboard'),
             NavigationDestination(icon: Icon(Icons.restaurant_rounded), label: 'Food'),
+            NavigationDestination(icon: Icon(Icons.stars_rounded), label: 'Rewards'),
             NavigationDestination(icon: Icon(Icons.hotel_rounded), label: 'Hotel'),
             NavigationDestination(icon: Icon(Icons.key_rounded), label: 'Room Key'),
           ],
@@ -405,6 +411,7 @@ class _ResponsiveScaffoldState extends State<ResponsiveScaffold> {
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.dashboard_rounded), label: 'Dashboard'),
           BottomNavigationBarItem(icon: Icon(Icons.restaurant_rounded), label: 'Food'),
+          BottomNavigationBarItem(icon: Icon(Icons.stars_rounded), label: 'Rewards'),
           BottomNavigationBarItem(icon: Icon(Icons.hotel_rounded), label: 'Hotel'),
           BottomNavigationBarItem(icon: Icon(Icons.key_rounded), label: 'Room Key'),
         ],
