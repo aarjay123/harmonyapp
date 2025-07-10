@@ -1,5 +1,3 @@
-// fragments/hotel.dart
-
 import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:flutter/gestures.dart'; // Import for GestureRecognizers
@@ -173,6 +171,41 @@ class _HotelPageState extends State<HotelPage> with TickerProviderStateMixin {
     );
   }
 
+  /// **NEW**: Builds the main page header consistent with the HiCard app style.
+  Widget _buildHeader(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16.0, 24.0, 16.0, 16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ShaderMask(
+            blendMode: BlendMode.srcIn,
+            shaderCallback: (bounds) => LinearGradient(
+              colors: [colorScheme.primary, colorScheme.tertiary],
+            ).createShader(
+              Rect.fromLTWH(0, 0, bounds.width, bounds.height),
+            ),
+            child: Text(
+              'Hotel',
+              style: textTheme.headlineMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          Text(
+            'Manage your hotel experience below.',
+            style: textTheme.titleMedium?.copyWith(
+              color: colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -180,114 +213,69 @@ class _HotelPageState extends State<HotelPage> with TickerProviderStateMixin {
 
     return Scaffold(
       backgroundColor: colorScheme.surface,
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // New Header Section
-          Padding(
-            padding: const EdgeInsets.only(top: 72.0, left: 16.0, right: 16.0, bottom: 0.0),
-            child: Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: _contentMaxWidth),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.hotel_rounded, // Icon for Hotel page
-                          size: 36,
-                          color: colorScheme.primary,
-                        ),
-                        const SizedBox(width: 12),
-                        Text(
-                          'Hotel', // Main title
-                          style: theme.textTheme.displaySmall?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: colorScheme.primary,
-                          ),
-                        ),
-                      ],
+      // **UPDATED**: The body is now wrapped in a SafeArea to prevent overlap with the status bar.
+      body: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // **UPDATED**: The old header has been replaced with the new, consistent header widget.
+            _buildHeader(context),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: _contentMaxWidth),
+                  child: TabBar(
+                    controller: _tabController,
+                    labelColor: colorScheme.onPrimaryContainer,
+                    unselectedLabelColor: colorScheme.onSurfaceVariant,
+                    indicatorSize: TabBarIndicatorSize.tab,
+                    indicator: BoxDecoration(
+                      borderRadius: BorderRadius.circular(24.0),
+                      color: colorScheme.primaryContainer,
                     ),
-                    Text(
-                      'Manage your hotel experience below.', // Subtitle
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                    // NEW: Added a tiny SizedBox for a small margin
-                    const SizedBox(height: 8.0), // Adds a 4.0 pixel height space
-                  ],
-                ),
-              ),
-            ),
-          ),
-          // MODIFIED: Set top: false on SafeArea to remove implicit top padding
-          SafeArea(
-            top: false, // Prevents SafeArea from adding top padding (since no AppBar is present)
-            bottom: false,
-            child: Material(
-              color: colorScheme.surface,
-              elevation: 0,
-              child: Padding(
-                // MODIFIED: Ensured vertical padding is 0.0 to bring tab bar closer to title
-                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 0.0),
-                child: Center(
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: _contentMaxWidth),
-                    child: TabBar(
-                      controller: _tabController,
-                      labelColor: colorScheme.onPrimaryContainer,
-                      unselectedLabelColor: colorScheme.onSurfaceVariant,
-                      indicatorSize: TabBarIndicatorSize.tab,
-                      indicator: BoxDecoration(
-                        borderRadius: BorderRadius.circular(24.0),
-                        color: colorScheme.primaryContainer,
-                      ),
-                      splashBorderRadius: BorderRadius.circular(24.0),
-                      dividerHeight: 0.0,
-                      tabs: const [
-                        Tab(text: 'Book'),
-                        Tab(text: 'Arriving'),
-                        Tab(text: 'Leaving'),
-                      ],
-                    ),
+                    splashBorderRadius: BorderRadius.circular(24.0),
+                    dividerHeight: 0.0,
+                    tabs: const [
+                      Tab(text: 'Book'),
+                      Tab(text: 'Arriving'),
+                      Tab(text: 'Leaving'),
+                    ],
                   ),
                 ),
               ),
             ),
-          ),
-          Expanded(
-            child: TabBarView(
-              controller: _tabController,
-              physics: const NeverScrollableScrollPhysics(),
-              children: [
-                _buildTabContentWithHeader(
-                  tabTitle: 'Book a Room',
-                  tabIcon: Icons.calendar_month_rounded,
-                  tabSubtitle: 'Book a room at weB&B below.',
-                  iframeUrl: _bookRoomFormUrl,
-                  fullscreenUrl: _bookRoomFullscreenUrl,
-                ),
-                _buildTabContentWithHeader(
-                  tabTitle: 'Arriving',
-                  tabIcon: Icons.login_rounded,
-                  tabSubtitle: 'Welcome! Check in below. :)',
-                  iframeUrl: _checkInFormUrl,
-                  fullscreenUrl: _checkInFullscreenUrl,
-                ),
-                _buildTabContentWithHeader(
-                  tabTitle: 'Leaving',
-                  tabIcon: Icons.logout_rounded,
-                  tabSubtitle: 'Thank you for staying with us! Check out below. :)',
-                  iframeUrl: _checkOutFormUrl,
-                  fullscreenUrl: _checkOutFullscreenUrl,
-                ),
-              ],
+            Expanded(
+              child: TabBarView(
+                controller: _tabController,
+                physics: const NeverScrollableScrollPhysics(),
+                children: [
+                  _buildTabContentWithHeader(
+                    tabTitle: 'Book a Room',
+                    tabIcon: Icons.calendar_month_rounded,
+                    tabSubtitle: 'Book a room at weB&B below.',
+                    iframeUrl: _bookRoomFormUrl,
+                    fullscreenUrl: _bookRoomFullscreenUrl,
+                  ),
+                  _buildTabContentWithHeader(
+                    tabTitle: 'Arriving',
+                    tabIcon: Icons.login_rounded,
+                    tabSubtitle: 'Welcome! Check in below. :)',
+                    iframeUrl: _checkInFormUrl,
+                    fullscreenUrl: _checkInFullscreenUrl,
+                  ),
+                  _buildTabContentWithHeader(
+                    tabTitle: 'Leaving',
+                    tabIcon: Icons.logout_rounded,
+                    tabSubtitle: 'Thank you for staying with us! Check out below. :)',
+                    iframeUrl: _checkOutFormUrl,
+                    fullscreenUrl: _checkOutFullscreenUrl,
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

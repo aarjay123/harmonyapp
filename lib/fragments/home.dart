@@ -146,9 +146,6 @@ class _NativeWelcomePageState extends State<NativeWelcomePage> {
     if (mounted) setState(() {});
   }
 
-  // This function is no longer needed here as it's moved to quick_actions_card.dart
-  // Widget _buildQuickActionCard(...) { ... }
-
   void _showAddWidgetDialog() {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
@@ -433,130 +430,141 @@ class _NativeWelcomePageState extends State<NativeWelcomePage> {
     );
   }
 
+  /// **UPDATED**: Builds the new header consistent with the HiCard app style.
+  Widget _buildHeader(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16.0, 24.0, 16.0, 16.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                ShaderMask(
+                  blendMode: BlendMode.srcIn,
+                  shaderCallback: (bounds) => LinearGradient(
+                    colors: [colorScheme.primary, colorScheme.tertiary],
+                  ).createShader(
+                    Rect.fromLTWH(0, 0, bounds.width, bounds.height),
+                  ),
+                  child: Text(
+                    _isInEditMode ? 'Edit Mode' : _greeting,
+                    style: textTheme.headlineMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                if (!_isInEditMode)
+                  Text(
+                    'Welcome to Harmony!',
+                    style: textTheme.titleMedium?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          // Add the "Done" button here, visible only in edit mode
+          if (_isInEditMode)
+            IconButton(
+              icon: Icon(Icons.done_rounded, color: colorScheme.primary),
+              onPressed: () => setState(() => _isInEditMode = false),
+              tooltip: 'Done Editing',
+            ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-    final Shader greetingGradientShader = LinearGradient(
-      colors: <Color>[colorScheme.primary, colorScheme.tertiary],
-    ).createShader(const Rect.fromLTWH(0.0, 0.0, 300.0, 100.0));
+    final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
       backgroundColor: colorScheme.surface,
-      body: RefreshIndicator(
-        onRefresh: () async {
-          setState(() {
-            _updateGreetingAndDate();
-          });
-        },
-        color: colorScheme.primary,
-        backgroundColor: colorScheme.surfaceContainerHighest,
-        child: CustomScrollView(
-          slivers: [
-            SliverAppBar(
-              expandedHeight: _isInEditMode ? 120.0 : 150.0,
-              flexibleSpace: FlexibleSpaceBar(
-                background: Padding(
-                  padding: const EdgeInsets.fromLTRB(16.0, 0, 16.0, 16.0),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        _isInEditMode ? 'Edit Mode' : '$_greeting!',
-                        style: theme.textTheme.displaySmall?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          foreground: Paint()..shader = greetingGradientShader,
-                        ),
-                        maxLines: 1, overflow: TextOverflow.ellipsis,
-                      ),
-                      if (!_isInEditMode) ...[
-                        const SizedBox(height: 4),
-                        Text(
-                          'Welcome to Harmony!',
-                          style: theme.textTheme.headlineMedium?.copyWith(
-                            color: colorScheme.onSurfaceVariant,
-                          ),
-                          maxLines: 1, overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
+      // **UPDATED**: The body is now wrapped in a SafeArea widget.
+      body: SafeArea(
+        child: RefreshIndicator(
+          onRefresh: () async {
+            setState(() {
+              _updateGreetingAndDate();
+            });
+          },
+          color: colorScheme.primary,
+          backgroundColor: colorScheme.surfaceContainerHighest,
+          child: CustomScrollView(
+            slivers: [
+              // **UPDATED**: The SliverAppBar has been replaced with the new header widget.
+              SliverToBoxAdapter(
+                child: _buildHeader(context),
               ),
-              backgroundColor: colorScheme.surface,
-              elevation: 0,
-              pinned: false,
-              actions: _isInEditMode ? [
-                IconButton(
-                  icon: Icon(Icons.done_rounded, color: colorScheme.primary),
-                  onPressed: () => setState(() => _isInEditMode = false),
-                  tooltip: 'Done Editing',
-                ),
-              ] : null,
-            ),
-            SliverPadding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              sliver: SliverToBoxAdapter(
-                child: Center(
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: _contentMaxWidth),
-                    child: LayoutBuilder(
-                      builder: (context, constraints) {
-                        if (_userWidgetOrder.isEmpty) {
-                          return _buildEmptyState(context);
-                        }
+              SliverPadding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                sliver: SliverToBoxAdapter(
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: _contentMaxWidth),
+                      child: LayoutBuilder(
+                        builder: (context, constraints) {
+                          if (_userWidgetOrder.isEmpty) {
+                            return _buildEmptyState(context);
+                          }
 
-                        if (constraints.maxWidth >= _twoColumnBreakpoint) {
-                          return _buildTwoColumnLayout(context, constraints);
-                        } else {
-                          return _buildSingleColumnLayout(context);
-                        }
-                      },
+                          if (constraints.maxWidth >= _twoColumnBreakpoint) {
+                            return _buildTwoColumnLayout(context, constraints);
+                          } else {
+                            return _buildSingleColumnLayout(context);
+                          }
+                        },
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
-            if (_isInEditMode)
+              if (_isInEditMode)
+                SliverToBoxAdapter(
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: _contentMaxWidth),
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(16.0, 0, 16.0, 8.0),
+                        child: FilledButton.tonalIcon(
+                          onPressed: _showAddWidgetDialog,
+                          icon: const Icon(Icons.add_box_rounded),
+                          label: const Text('Add New Widget'),
+                          style: FilledButton.styleFrom(
+                            minimumSize: const Size.fromHeight(50),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0)),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
               SliverToBoxAdapter(
                 child: Center(
                   child: ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: _contentMaxWidth),
                     child: Padding(
-                      padding: const EdgeInsets.fromLTRB(16.0, 0, 16.0, 8.0),
-                      child: FilledButton.tonalIcon(
-                        onPressed: _showAddWidgetDialog,
-                        icon: const Icon(Icons.add_box_rounded),
-                        label: const Text('Add New Widget'),
+                      padding: const EdgeInsets.fromLTRB(16.0, 24.0, 16.0, 24.0),
+                      child: FilledButton.tonal(
+                        onPressed: () => setState(() => _isInEditMode = !_isInEditMode),
                         style: FilledButton.styleFrom(
                           minimumSize: const Size.fromHeight(50),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0)),
                         ),
+                        child: Text(_isInEditMode ? 'Exit Edit Mode' : 'Edit Widgets'),
                       ),
                     ),
                   ),
                 ),
               ),
-            SliverToBoxAdapter(
-              child: Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: _contentMaxWidth),
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(16.0, 24.0, 16.0, 24.0),
-                    child: FilledButton.tonal(
-                      onPressed: () => setState(() => _isInEditMode = !_isInEditMode),
-                      style: FilledButton.styleFrom(
-                        minimumSize: const Size.fromHeight(50),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0)),
-                      ),
-                      child: Text(_isInEditMode ? 'Exit Edit Mode' : 'Edit Widgets'),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
