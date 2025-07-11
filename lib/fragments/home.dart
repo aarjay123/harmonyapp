@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb; // Import for checking the platform
 import 'package:intl/intl.dart'; // For date formatting
 import 'package:reorderable_grid_view/reorderable_grid_view.dart'; // For the reorderable grid
 import 'package:shared_preferences/shared_preferences.dart'; // For local data persistence
@@ -80,11 +81,13 @@ class _NativeWelcomePageState extends State<NativeWelcomePage> {
         displayName: 'Quick Actions',
         builder: (context) => QuickActionsCard(onNavigateToTab: widget.onNavigateToTab),
       ),
-      'news_feed': DashboardWidgetModel(
-        id: 'news_feed',
-        displayName: 'Latest News',
-        builder: (context) => const NewsFeedCard(),
-      ),
+      // **UPDATED**: This widget will only be available if the app is NOT running on the web.
+      if (!kIsWeb)
+        'news_feed': DashboardWidgetModel(
+          id: 'news_feed',
+          displayName: 'Latest News',
+          builder: (context) => const NewsFeedCard(),
+        ),
       'quick_notes': DashboardWidgetModel(
         id: 'quick_notes',
         displayName: 'Quick Notes',
