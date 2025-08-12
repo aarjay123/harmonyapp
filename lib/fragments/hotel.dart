@@ -43,8 +43,8 @@ class _HotelPageState extends State<HotelPage> with TickerProviderStateMixin {
   final String _checkOutFormUrl = 'https://forms.office.com/Pages/ResponsePage.aspx?id=DQSIkWdsW0yxEjajBLZtrQAAAAAAAAAAAAYAABORJhBUMjdUUDRPMzg2OE9GOTRaQlNMUjJSUFdONS4u&embed=true';
   final String _checkOutFullscreenUrl = 'https://forms.office.com/Pages/ResponsePage.aspx?id=DQSIkWdsW0yxEjajBLZtrQAAAAAAAAAAAAYAABORJhBUMjdUUDRPMzg2OE9GOTRaQlNMUjJSUFdONS4u';
 
-
-  static const double _contentMaxWidth = 768.0;
+  // UPDATED: Max width is now consistent with the Rewards page.
+  static const double _contentMaxWidth = 1200.0;
 
   @override
   void initState() {
@@ -58,11 +58,12 @@ class _HotelPageState extends State<HotelPage> with TickerProviderStateMixin {
     super.dispose();
   }
 
-  // This method now builds the content for each tab, including its own header
+  // This method now builds the content for each tab.
+  // The responsive constraints are handled by the parent widget.
   Widget _buildTabContentWithHeader({
-    required String tabTitle,         // e.g., "Book a Room"
-    required IconData tabIcon,        // Icon for this specific tab's header
-    required String tabSubtitle,      // Subtitle for this specific tab's header
+    required String tabTitle,
+    required IconData tabIcon,
+    required String tabSubtitle,
     required String iframeUrl,
     required String fullscreenUrl,
   }) {
@@ -71,113 +72,110 @@ class _HotelPageState extends State<HotelPage> with TickerProviderStateMixin {
 
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
-      child: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: _contentMaxWidth),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Tab-Specific Header Section
-              Padding(
-                padding: const EdgeInsets.only(bottom: 16.0, top:8.0), // Added top padding
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+      // REMOVED: Redundant Center and ConstrainedBox widgets.
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Tab-Specific Header Section
+          Padding(
+            padding: const EdgeInsets.only(bottom: 16.0, top:8.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
                   children: [
-                    Row(
-                      children: [
-                        Icon(tabIcon, size: 32, color: colorScheme.primary), // Slightly larger icon
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                              tabTitle,
-                              style: theme.textTheme.headlineSmall?.copyWith( // Changed to headlineSmall
-                                color: colorScheme.primary,
-                                fontWeight: FontWeight.w600,
-                              )
-                          ),
-                        ),
-                      ],
+                    Icon(tabIcon, size: 32, color: colorScheme.primary),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                          tabTitle,
+                          style: theme.textTheme.headlineSmall?.copyWith(
+                            color: colorScheme.primary,
+                            fontWeight: FontWeight.w600,
+                          )
+                      ),
                     ),
-                    if (tabSubtitle.isNotEmpty) ...[
-                      const SizedBox(height: 8),
-                      Padding(
-                        padding: const EdgeInsets.only(left: 44.0), // Indent subtitle to align with text after icon
-                        child: Text(
-                          tabSubtitle,
-                          style: theme.textTheme.bodyLarge?.copyWith(color: colorScheme.onSurfaceVariant),
-                        ),
-                      )
-                    ]
                   ],
                 ),
-              ),
-              // Card for the button and webview
-              Card(
-                elevation: 0,
-                color: colorScheme.secondaryContainer,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.0)),
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      ElevatedButton.icon(
-                        icon: Icon(Icons.fullscreen_rounded, color: colorScheme.onPrimary),
-                        label: Text('Open Form Fullscreen', style: TextStyle(color: colorScheme.onPrimary)),
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => FullscreenWebViewPage(url: fullscreenUrl, title: tabTitle),
-                            ),
-                          );
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: colorScheme.primary,
-                          foregroundColor: colorScheme.onPrimary,
-                          elevation: 0,
-                          padding: const EdgeInsets.symmetric(vertical: 10),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.0)),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      SizedBox(
-                        height: 500,
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(16.0),
-                          child: InAppWebView(
-                            key: ValueKey(iframeUrl),
-                            initialUrlRequest: URLRequest(url: WebUri(iframeUrl)),
-                            initialSettings: InAppWebViewSettings(
-                              javaScriptEnabled: true,
-                              transparentBackground: true,
-                            ),
-                            gestureRecognizers: <Factory<OneSequenceGestureRecognizer>>{
-                              Factory<VerticalDragGestureRecognizer>(
-                                    () => VerticalDragGestureRecognizer(),
-                              ),
-                            },
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
+                if (tabSubtitle.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Padding(
+                    padding: const EdgeInsets.only(left: 44.0),
+                    child: Text(
+                      tabSubtitle,
+                      style: theme.textTheme.bodyLarge?.copyWith(color: colorScheme.onSurfaceVariant),
+                    ),
+                  )
+                ]
+              ],
+            ),
           ),
-        ),
+          // Card for the button and webview
+          Card(
+            elevation: 0,
+            color: colorScheme.secondaryContainer,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.0)),
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  ElevatedButton.icon(
+                    icon: Icon(Icons.fullscreen_rounded, color: colorScheme.onPrimary),
+                    label: Text('Open Form Fullscreen', style: TextStyle(color: colorScheme.onPrimary)),
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => FullscreenWebViewPage(url: fullscreenUrl, title: tabTitle),
+                        ),
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: colorScheme.primary,
+                      foregroundColor: colorScheme.onPrimary,
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.0)),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    height: 500,
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(16.0),
+                      child: InAppWebView(
+                        key: ValueKey(iframeUrl),
+                        initialUrlRequest: URLRequest(url: WebUri(iframeUrl)),
+                        initialSettings: InAppWebViewSettings(
+                          javaScriptEnabled: true,
+                          transparentBackground: true,
+                        ),
+                        gestureRecognizers: <Factory<OneSequenceGestureRecognizer>>{
+                          Factory<VerticalDragGestureRecognizer>(
+                                () => VerticalDragGestureRecognizer(),
+                          ),
+                        },
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  /// **NEW**: Builds the main page header consistent with the HiCard app style.
+  /// Builds the main page header consistent with the Rewards page style.
   Widget _buildHeader(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
     final colorScheme = Theme.of(context).colorScheme;
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16.0, 24.0, 16.0, 16.0),
+      // Adjusted padding to match Rewards page
+      padding: const EdgeInsets.fromLTRB(24.0, 24.0, 24.0, 16.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -213,18 +211,19 @@ class _HotelPageState extends State<HotelPage> with TickerProviderStateMixin {
 
     return Scaffold(
       backgroundColor: colorScheme.surface,
-      // **UPDATED**: The body is now wrapped in a SafeArea to prevent overlap with the status bar.
       body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // **UPDATED**: The old header has been replaced with the new, consistent header widget.
-            _buildHeader(context),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              child: Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: _contentMaxWidth),
+        // UPDATED: Wrapped the entire page body in a centering and constraining widget
+        // for a responsive layout on larger screens.
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: _contentMaxWidth),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _buildHeader(context),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  // REMOVED: Redundant Center and ConstrainedBox widgets.
                   child: TabBar(
                     controller: _tabController,
                     labelColor: colorScheme.onPrimaryContainer,
@@ -243,38 +242,38 @@ class _HotelPageState extends State<HotelPage> with TickerProviderStateMixin {
                     ],
                   ),
                 ),
-              ),
+                Expanded(
+                  child: TabBarView(
+                    controller: _tabController,
+                    physics: const NeverScrollableScrollPhysics(),
+                    children: [
+                      _buildTabContentWithHeader(
+                        tabTitle: 'Book a Room',
+                        tabIcon: Icons.calendar_month_rounded,
+                        tabSubtitle: 'Book a room at weB&B below.',
+                        iframeUrl: _bookRoomFormUrl,
+                        fullscreenUrl: _bookRoomFullscreenUrl,
+                      ),
+                      _buildTabContentWithHeader(
+                        tabTitle: 'Arriving',
+                        tabIcon: Icons.login_rounded,
+                        tabSubtitle: 'Welcome! Check in below. :)',
+                        iframeUrl: _checkInFormUrl,
+                        fullscreenUrl: _checkInFullscreenUrl,
+                      ),
+                      _buildTabContentWithHeader(
+                        tabTitle: 'Leaving',
+                        tabIcon: Icons.logout_rounded,
+                        tabSubtitle: 'Thank you for staying with us! Check out below. :)',
+                        iframeUrl: _checkOutFormUrl,
+                        fullscreenUrl: _checkOutFullscreenUrl,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
-            Expanded(
-              child: TabBarView(
-                controller: _tabController,
-                physics: const NeverScrollableScrollPhysics(),
-                children: [
-                  _buildTabContentWithHeader(
-                    tabTitle: 'Book a Room',
-                    tabIcon: Icons.calendar_month_rounded,
-                    tabSubtitle: 'Book a room at weB&B below.',
-                    iframeUrl: _bookRoomFormUrl,
-                    fullscreenUrl: _bookRoomFullscreenUrl,
-                  ),
-                  _buildTabContentWithHeader(
-                    tabTitle: 'Arriving',
-                    tabIcon: Icons.login_rounded,
-                    tabSubtitle: 'Welcome! Check in below. :)',
-                    iframeUrl: _checkInFormUrl,
-                    fullscreenUrl: _checkInFullscreenUrl,
-                  ),
-                  _buildTabContentWithHeader(
-                    tabTitle: 'Leaving',
-                    tabIcon: Icons.logout_rounded,
-                    tabSubtitle: 'Thank you for staying with us! Check out below. :)',
-                    iframeUrl: _checkOutFormUrl,
-                    fullscreenUrl: _checkOutFullscreenUrl,
-                  ),
-                ],
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );
