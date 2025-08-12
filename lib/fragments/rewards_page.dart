@@ -59,6 +59,10 @@ class _Offer {
       }
     }
 
+    // The logic for expired offers is handled by the label 'expired-offer'.
+    // If a post is labeled as expired, we will not show the redeem button later,
+    // by checking if the offer belongs to the _expiredOffers list.
+    // The presence of 'points' here is just for data parsing.
     return _Offer(
       title: post['title'] ?? 'No Title',
       description: description,
@@ -70,7 +74,7 @@ class _Offer {
 }
 
 // --- RewardsPage Fragment ---
-// This widget now fetches offers dynamically from a Blogger blog.
+// This widget now fetches offers dynamically and has a responsive layout.
 class RewardsPage extends StatefulWidget {
   const RewardsPage({Key? key}) : super(key: key);
 
@@ -79,6 +83,9 @@ class RewardsPage extends StatefulWidget {
 }
 
 class _RewardsPageState extends State<RewardsPage> {
+  // NEW: Added max width constraint for larger screens.
+  static const double _contentMaxWidth = 1200.0;
+
   List<_Offer> _activeOffers = [];
   List<_Offer> _expiredOffers = [];
   bool _isLoading = true;
@@ -179,42 +186,50 @@ class _RewardsPageState extends State<RewardsPage> {
       length: 2,
       child: Scaffold(
         body: SafeArea(
-          child: RefreshIndicator(
-            onRefresh: _fetchOffers,
-            child: NestedScrollView(
-              headerSliverBuilder: (context, innerBoxIsScrolled) {
-                return [
-                  SliverToBoxAdapter(child: _buildHeader(context)),
-                  SliverToBoxAdapter(child: _buildBarcodeCard(context)),
-                  SliverPersistentHeader(
-                    delegate: _SliverTabBarDelegate(
-                      TabBar(
-                        labelColor: Theme.of(context).colorScheme.onPrimary,
-                        unselectedLabelColor: Theme.of(context).colorScheme.primary,
-                        indicator: BoxDecoration(
-                          borderRadius: BorderRadius.circular(50),
-                          color: Theme.of(context).colorScheme.primary,
+          // UPDATED: Wrapped the entire scroll view in a centering and constraining widget
+          // for a responsive layout on larger screens.
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: _contentMaxWidth),
+              child: RefreshIndicator(
+                onRefresh: _fetchOffers,
+                child: NestedScrollView(
+                  headerSliverBuilder: (context, innerBoxIsScrolled) {
+                    return [
+                      SliverToBoxAdapter(child: _buildHeader(context)),
+                      SliverToBoxAdapter(child: _buildBarcodeCard(context)),
+                      SliverPersistentHeader(
+                        delegate: _SliverTabBarDelegate(
+                          TabBar(
+                            labelColor: Theme.of(context).colorScheme.onPrimary,
+                            unselectedLabelColor: Theme.of(context).colorScheme.primary,
+                            indicator: BoxDecoration(
+                              borderRadius: BorderRadius.circular(50),
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
+                            indicatorSize: TabBarIndicatorSize.tab,
+                            tabs: const [
+                              Tab(text: 'Active'),
+                              Tab(text: 'Expired'),
+                            ],
+                          ),
                         ),
-                        indicatorSize: TabBarIndicatorSize.tab,
-                        tabs: const [
-                          Tab(text: 'Active'),
-                          Tab(text: 'Expired'),
-                        ],
+                        pinned: true,
                       ),
-                    ),
-                    pinned: true,
+                    ];
+                  },
+                  body: _isLoading
+                      ? const Center(child: CircularProgressIndicator())
+                      : _error != null
+                      ? _buildErrorView()
+                      : TabBarView(
+                    children: [
+                      // The logic to show/hide the redeem button is now inside _buildOfferList
+                      _buildOfferList(_activeOffers, 'No active offers found.', isExpired: false),
+                      _buildOfferList(_expiredOffers, 'No expired offers found.', isExpired: true),
+                    ],
                   ),
-                ];
-              },
-              body: _isLoading
-                  ? const Center(child: CircularProgressIndicator())
-                  : _error != null
-                  ? _buildErrorView()
-                  : TabBarView(
-                children: [
-                  _buildOfferList(_activeOffers, 'No active offers found.'),
-                  _buildOfferList(_expiredOffers, 'No expired offers found.'),
-                ],
+                ),
               ),
             ),
           ),
@@ -242,7 +257,7 @@ class _RewardsPageState extends State<RewardsPage> {
               Rect.fromLTWH(0, 0, bounds.width, bounds.height),
             ),
             child: Text(
-              'Your Rewards',
+              'HiRewards',
               style: textTheme.headlineMedium?.copyWith(
                 fontWeight: FontWeight.bold,
               ),
@@ -317,7 +332,8 @@ class _RewardsPageState extends State<RewardsPage> {
     );
   }
 
-  Widget _buildOfferList(List<_Offer> offers, String emptyMessage) {
+  // UPDATED: Added an `isExpired` flag to control button visibility, restoring the original intent.
+  Widget _buildOfferList(List<_Offer> offers, String emptyMessage, {required bool isExpired}) {
     if (offers.isEmpty) {
       return Center(
         child: Text(emptyMessage),
@@ -329,6 +345,9 @@ class _RewardsPageState extends State<RewardsPage> {
       itemBuilder: (context, index) {
         final offer = offers[index];
         final colorScheme = Theme.of(context).colorScheme;
+
+        // The redeem button is only shown if the offer has points AND it's not in the expired list.
+        final bool showRedeemButton = offer.points != null && !isExpired;
 
         return Card(
           elevation: 0,
@@ -361,7 +380,7 @@ class _RewardsPageState extends State<RewardsPage> {
                     color: colorScheme.onSurfaceVariant.withOpacity(0.7),
                   ),
                 ),
-                if (offer.points != null) ...[
+                if (showRedeemButton) ...[
                   const SizedBox(height: 16),
                   SizedBox(
                     width: double.infinity,
@@ -394,6 +413,7 @@ class _RewardsPageState extends State<RewardsPage> {
 }
 
 // A custom delegate to make the TabBar stick to the top when scrolling.
+// This is now simpler as it doesn't need to manage the width itself.
 class _SliverTabBarDelegate extends SliverPersistentHeaderDelegate {
   _SliverTabBarDelegate(this.tabBar);
 
