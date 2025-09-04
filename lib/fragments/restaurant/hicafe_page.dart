@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
-import 'package:flutter/gestures.dart'; // Import for GestureRecognizers
-import 'package:flutter/foundation.dart' show Factory; // Import Factory
+import 'package:flutter/gestures.dart';
+import 'package:flutter/foundation.dart' show Factory;
 
 // A simple page to display a webview in fullscreen
 class FullscreenWebViewPage extends StatelessWidget {
@@ -25,6 +25,133 @@ class FullscreenWebViewPage extends StatelessWidget {
   }
 }
 
+// IMPROVED: This custom WebView widget now handles its own state (loading, errors)
+// and includes pull-to-refresh functionality.
+class InteractiveWebView extends StatefulWidget {
+  final String url;
+  const InteractiveWebView({super.key, required this.url});
+
+  @override
+  State<InteractiveWebView> createState() => _InteractiveWebViewState();
+}
+
+class _InteractiveWebViewState extends State<InteractiveWebView> {
+  late InAppWebViewController _webViewController;
+  // FIX: Changed from 'late' to nullable to be initialized in didChangeDependencies.
+  PullToRefreshController? _pullToRefreshController;
+  double _progress = 0;
+  bool _hasError = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Initialization is moved to didChangeDependencies to safely access context.
+  }
+
+  // FIX: This is the correct lifecycle method to access context for initialization.
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Initialize the controller here if it hasn't been already.
+    _pullToRefreshController ??= PullToRefreshController(
+      settings: PullToRefreshSettings(
+        color: Theme.of(context).colorScheme.primary,
+      ),
+      onRefresh: () async {
+        // Check if the widget is still in the tree before interacting with the controller.
+        if (mounted) {
+          await _webViewController.reload();
+        }
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Stack(
+      children: [
+        InAppWebView(
+          key: ValueKey(widget.url),
+          initialUrlRequest: URLRequest(url: WebUri(widget.url)),
+          onWebViewCreated: (controller) {
+            _webViewController = controller;
+          },
+          pullToRefreshController: _pullToRefreshController,
+          onProgressChanged: (controller, progress) {
+            setState(() {
+              _progress = progress / 100;
+              if (progress == 100) {
+                _pullToRefreshController?.endRefreshing();
+              }
+            });
+          },
+          onLoadError: (controller, url, code, message) {
+            _pullToRefreshController?.endRefreshing();
+            setState(() {
+              _hasError = true;
+            });
+          },
+          onLoadHttpError: (controller, url, statusCode, description) {
+            _pullToRefreshController?.endRefreshing();
+            setState(() {
+              _hasError = true;
+            });
+          },
+          // This is crucial for enabling scrolling within nested scroll views
+          gestureRecognizers: <Factory<OneSequenceGestureRecognizer>>{
+            Factory<VerticalDragGestureRecognizer>(
+                  () => VerticalDragGestureRecognizer(),
+            ),
+          },
+        ),
+        if (_progress < 1.0 && !_hasError)
+          LinearProgressIndicator(
+            value: _progress,
+            backgroundColor: theme.colorScheme.surfaceVariant,
+            valueColor: AlwaysStoppedAnimation<Color>(theme.colorScheme.primary),
+          ),
+        if (_hasError)
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.wifi_off_rounded, size: 48, color: theme.colorScheme.onSurfaceVariant),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Failed to load content',
+                    style: theme.textTheme.titleMedium,
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Please check your internet connection and try again.',
+                    style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 24),
+                  FilledButton.icon(
+                    icon: const Icon(Icons.refresh_rounded),
+                    label: const Text('Retry'),
+                    onPressed: () {
+                      setState(() {
+                        _hasError = false;
+                        _progress = 0;
+                      });
+                      _webViewController.reload();
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
 class HiCafePage extends StatefulWidget {
   const HiCafePage({super.key});
 
@@ -36,7 +163,6 @@ class _HiCafePageState extends State<HiCafePage> with TickerProviderStateMixin {
   late TabController _mainTabController;
   late TabController _menusTabController;
 
-  // URLs for iframes
   final String _bookTableFormUrl = 'https://docs.google.com/forms/d/e/1FAIpQLSfeP-cO7te979Dc-QRmUsBwQTzIojYRtg7Yx3OufiiUcn2r2g/viewform?embedded=true';
   final String _orderFoodFormUrl = 'https://docs.google.com/forms/d/e/1FAIpQLSfGzW5su4bVmpeRVGRbDDeudfZkvhbyuXi-pySKLW4qA8WnaA/viewform?embedded=true';
 
@@ -47,15 +173,13 @@ class _HiCafePageState extends State<HiCafePage> with TickerProviderStateMixin {
     'Gastro': 'https://drive.google.com/file/d/1iHoe-pBMn0niY9R2IoZgYmhgXLaz7Mrz/preview',
   };
 
-  // Define a max width for desktop-like content presentation
-  static const double _contentMaxWidth = 768.0;
-
+  static const double _contentMaxWidth = 800.0;
 
   @override
   void initState() {
     super.initState();
-    _mainTabController = TabController(length: 3, vsync: this); // Book, Menus, Order
-    _menusTabController = TabController(length: _menuUrls.length, vsync: this); // For different menus
+    _mainTabController = TabController(length: 3, vsync: this);
+    _menusTabController = TabController(length: _menuUrls.length, vsync: this);
   }
 
   @override
@@ -65,15 +189,16 @@ class _HiCafePageState extends State<HiCafePage> with TickerProviderStateMixin {
     super.dispose();
   }
 
-  Widget _buildWebViewSection({
+  // REFACTORED: This widget builds the content for the Book and Order tabs.
+  Widget _buildFormPage({
     required String title,
     required String subtitle,
     required String iframeUrl,
-    required String fullscreenUrl, // URL for the fullscreen button
     required IconData titleIcon,
   }) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final String fullscreenUrl = iframeUrl.replaceAll("?embedded=true", "");
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16.0),
@@ -83,79 +208,51 @@ class _HiCafePageState extends State<HiCafePage> with TickerProviderStateMixin {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Padding(
-                padding: const EdgeInsets.only(bottom: 16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(titleIcon, size: 28, color: colorScheme.primary),
-                        const SizedBox(width: 12),
-                        Text(title, style: theme.textTheme.headlineSmall?.copyWith(color: colorScheme.onSurface, fontWeight: FontWeight.w600)),
-                      ],
-                    ),
-                    if (subtitle.isNotEmpty) ...[
-                      const SizedBox(height: 8),
-                      Padding(
-                        padding: const EdgeInsets.only(left: 40.0),
-                        child: Text(subtitle, style: theme.textTheme.bodyMedium?.copyWith(color: colorScheme.onSurfaceVariant)),
-                      )
-                    ]
-                  ],
-                ),
+              Row(
+                children: [
+                  Icon(titleIcon, size: 28, color: colorScheme.primary),
+                  const SizedBox(width: 12),
+                  Text(title, style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w600)),
+                ],
               ),
+              const SizedBox(height: 8),
+              Padding(
+                padding: const EdgeInsets.only(left: 40.0),
+                child: Text(subtitle, style: theme.textTheme.bodyMedium?.copyWith(color: colorScheme.onSurfaceVariant)),
+              ),
+              const SizedBox(height: 24),
               Card(
                 elevation: 0,
-                color: colorScheme.secondaryContainer,
+                color: colorScheme.surfaceVariant.withOpacity(0.5),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.0)),
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      ElevatedButton.icon(
-                        icon: Icon(Icons.fullscreen_rounded, color: colorScheme.onPrimary),
-                        label: Text('Open Form Fullscreen', style: TextStyle(color: colorScheme.onPrimary)),
+                clipBehavior: Clip.antiAlias,
+                child: Column(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.all(12.0),
+                      child: ElevatedButton.icon(
+                        icon: const Icon(Icons.fullscreen_rounded),
+                        label: const Text('Open Fullscreen'),
                         onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => FullscreenWebViewPage(url: fullscreenUrl, title: title),
-                            ),
+                          Navigator.push(context, MaterialPageRoute(
+                            builder: (_) => FullscreenWebViewPage(url: fullscreenUrl, title: title),
+                          ),
                           );
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: colorScheme.primary,
                           foregroundColor: colorScheme.onPrimary,
-                          elevation: 0,
-                          padding: const EdgeInsets.symmetric(vertical: 10),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.0)),
+                          minimumSize: const Size.fromHeight(48),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0)),
                         ),
                       ),
-                      const SizedBox(height: 16),
-                      SizedBox(
-                        height: 550, // Adjusted height, ensure it's reasonable
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(16.0),
-                          child: InAppWebView(
-                            key: ValueKey(iframeUrl),
-                            initialUrlRequest: URLRequest(url: WebUri(iframeUrl)),
-                            initialSettings: InAppWebViewSettings(
-                              javaScriptEnabled: true,
-                              transparentBackground: true,
-                            ),
-                            // Add gesture recognizers to allow webview scrolling
-                            gestureRecognizers: <Factory<OneSequenceGestureRecognizer>>{
-                              Factory<VerticalDragGestureRecognizer>(
-                                    () => VerticalDragGestureRecognizer(),
-                              ),
-                            },
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+                    ),
+                    const Divider(height: 1),
+                    SizedBox(
+                      height: MediaQuery.of(context).size.height * 0.7,
+                      child: InteractiveWebView(url: iframeUrl),
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -165,185 +262,90 @@ class _HiCafePageState extends State<HiCafePage> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildMenuTabContent(String menuName, String menuUrl) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16.0),
+  // REFACTORED: This builds the content for a single menu in the Menus tab.
+  Widget _buildMenuContent(String menuName, String menuUrl) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0),
       child: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: _contentMaxWidth),
           child: Card(
             elevation: 0,
-            color: colorScheme.secondaryContainer,
+            color: Colors.transparent, // Let the InteractiveWebView handle its background
+            clipBehavior: Clip.antiAlias,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.0)),
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text(
-                    '$menuName Menu',
-                    style: theme.textTheme.titleLarge?.copyWith(color: colorScheme.onSecondaryContainer, fontWeight: FontWeight.w600),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 16),
-                  ElevatedButton.icon(
-                    icon: Icon(Icons.fullscreen_rounded, color: colorScheme.onPrimary),
-                    label: Text('Open Menu Fullscreen', style: TextStyle(color: colorScheme.onPrimary)),
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => FullscreenWebViewPage(url: menuUrl, title: '$menuName Menu'),
-                        ),
-                      );
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: colorScheme.primary,
-                      foregroundColor: colorScheme.onPrimary,
-                      elevation: 0,
-                      padding: const EdgeInsets.symmetric(vertical: 10),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.0)),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  SizedBox(
-                    height: 550, // Adjusted height
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(16.0),
-                      child: InAppWebView(
-                        key: ValueKey(menuUrl),
-                        initialUrlRequest: URLRequest(url: WebUri(menuUrl)),
-                        initialSettings: InAppWebViewSettings(
-                          javaScriptEnabled: true,
-                          transparentBackground: true,
-                        ),
-                        // Add gesture recognizers to allow webview scrolling
-                        gestureRecognizers: <Factory<OneSequenceGestureRecognizer>>{
-                          Factory<VerticalDragGestureRecognizer>(
-                                () => VerticalDragGestureRecognizer(),
-                          ),
-                        },
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            child: InteractiveWebView(url: menuUrl),
           ),
         ),
       ),
     );
   }
 
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
+    // REBUILT with NestedScrollView to fix scrolling issues and improve layout.
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Your HiCafe™ Visit'),
-      ),
-      body: Column(
-        children: [
-          Material(
-            color: colorScheme.surface,
-            elevation: 0,
-            child: Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: _contentMaxWidth),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 8.0),
-                  child: TabBar(
-                    controller: _mainTabController,
-                    labelColor: colorScheme.onSecondaryContainer,
-                    unselectedLabelColor: colorScheme.onSurfaceVariant,
-                    indicatorSize: TabBarIndicatorSize.tab,
-                    indicator: BoxDecoration(
-                      borderRadius: BorderRadius.circular(24.0),
-                      color: colorScheme.secondaryContainer,
-                    ),
-                    splashBorderRadius: BorderRadius.circular(24.0),
-                    dividerHeight: 0.0,
-                    tabs: const [
-                      Tab(text: 'Book'),
-                      Tab(text: 'Menus'),
-                      Tab(text: 'Order'),
-                    ],
-                  ),
-                ),
+      body: NestedScrollView(
+        headerSliverBuilder: (BuildContext context, bool innerBoxIsScrolled) {
+          return <Widget>[
+            SliverAppBar(
+              title: const Text('Your HiCafe™ Visit'),
+              pinned: true,
+              floating: true,
+              forceElevated: innerBoxIsScrolled,
+              bottom: TabBar(
+                controller: _mainTabController,
+                tabs: const [
+                  Tab(icon: Icon(Icons.table_restaurant_rounded), text: 'Book'),
+                  Tab(icon: Icon(Icons.menu_book_rounded), text: 'Menus'),
+                  Tab(icon: Icon(Icons.delivery_dining_rounded), text: 'Order'),
+                ],
               ),
             ),
-          ),
-          Expanded(
-            child: TabBarView(
-              controller: _mainTabController,
+          ];
+        },
+        body: TabBarView(
+          controller: _mainTabController,
+          children: [
+            // Book a Table Tab
+            _buildFormPage(
+              title: 'Book a Table',
+              subtitle: 'Fill in the form to book, we\'ll reply within an hour.',
+              iframeUrl: _bookTableFormUrl,
+              titleIcon: Icons.table_restaurant_rounded,
+            ),
+            // Menus Tab
+            Column(
               children: [
-                _buildWebViewSection(
-                  title: 'Book a Table',
-                  subtitle: 'Fill in the below form to book a table, and we\'ll reply within an hour by email.',
-                  iframeUrl: _bookTableFormUrl,
-                  fullscreenUrl: _bookTableFormUrl.replaceAll("?embedded=true", ""),
-                  titleIcon: Icons.table_restaurant_rounded,
+                const SizedBox(height: 8),
+                TabBar(
+                  controller: _menusTabController,
+                  isScrollable: true,
+                  tabAlignment: TabAlignment.center,
+                  tabs: _menuUrls.keys.map((String key) => Tab(text: key)).toList(),
                 ),
-                Column(
-                  children: [
-                    Material(
-                      color: colorScheme.surface,
-                      elevation: 0,
-                      child: Center(
-                        child: ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: _contentMaxWidth),
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 8.0),
-                            child: TabBar(
-                              controller: _menusTabController,
-                              tabAlignment: TabAlignment.fill,
-                              labelColor: colorScheme.onTertiaryContainer,
-                              unselectedLabelColor: colorScheme.onSurfaceVariant,
-                              indicatorSize: TabBarIndicatorSize.tab,
-                              indicator: BoxDecoration(
-                                borderRadius: BorderRadius.circular(28.0),
-                                color: colorScheme.tertiaryContainer,
-                              ),
-                              splashBorderRadius: BorderRadius.circular(28.0),
-                              dividerHeight: 0.0,
-                              labelPadding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 6.0),
-                              labelStyle: theme.textTheme.labelLarge?.copyWith(fontSize: 13),
-                              tabs: _menuUrls.keys.map((String key) {
-                                return Tab(
-                                  child: Text(key),
-                                );
-                              }).toList(),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                    Expanded(
-                      child: TabBarView(
-                        controller: _menusTabController,
-                        children: _menuUrls.entries.map((entry) {
-                          return _buildMenuTabContent(entry.key, entry.value);
-                        }).toList(),
-                      ),
-                    ),
-                  ],
-                ),
-                _buildWebViewSection(
-                  title: 'Food Ordering',
-                  subtitle: 'Order the food you would like below.',
-                  iframeUrl: _orderFoodFormUrl,
-                  fullscreenUrl: _orderFoodFormUrl.replaceAll("?embedded=true", ""),
-                  titleIcon: Icons.edit_note_rounded,
+                Expanded(
+                  child: TabBarView(
+                    controller: _menusTabController,
+                    children: _menuUrls.entries.map((entry) {
+                      return _buildMenuContent(entry.key, entry.value);
+                    }).toList(),
+                  ),
                 ),
               ],
             ),
-          ),
-        ],
+            // Food Ordering Tab
+            _buildFormPage(
+              title: 'Food Ordering',
+              subtitle: 'Order the food you would like below.',
+              iframeUrl: _orderFoodFormUrl,
+              titleIcon: Icons.delivery_dining_rounded,
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -17,6 +17,7 @@ import '../widgets/daily_affirmation_card.dart';
 import '../widgets/quick_actions_card.dart';
 import '../widgets/countdown_card.dart'; // This now contains the CountdownEvent model
 import '../widgets/todo_list_card.dart';
+import '../widgets/youtube_card.dart';
 // ----------------------------------------
 
 /// Model to hold metadata for each dashboard widget.
@@ -85,6 +86,11 @@ class _NativeWelcomePageState extends State<NativeWelcomePage> {
           displayName: 'Latest News',
           builder: (context) => const NewsFeedCard(),
         ),
+      'youtube_card': DashboardWidgetModel(
+        id: 'youtube_card',
+        displayName: 'Videos',
+        builder: (context) => const YoutubeCard(),
+      ),
       'quick_notes': DashboardWidgetModel(
         id: 'quick_notes',
         displayName: 'Quick Notes',
