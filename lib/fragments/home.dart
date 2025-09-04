@@ -1,35 +1,26 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart' show kIsWeb; // Import for checking the platform
-import 'package:intl/intl.dart'; // For date formatting
-import 'package:reorderable_grid_view/reorderable_grid_view.dart'; // For the reorderable grid
-import 'package:shared_preferences/shared_preferences.dart'; // For local data persistence
-
-// IMPORTANT: Ensure your pubspec.yaml includes:
-/*
-dependencies:
-  flutter:
-    sdk: flutter
-  http: ^1.2.1
-  intl: ^0.19.0
-  geolocator: ^11.0.0
-  url_launcher: ^6.2.2
-  shared_preferences: ^2.2.0
-  reorderable_grid_view: ^2.2.6 # Added for two-column reordering
-*/
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:intl/intl.dart';
+import 'package:reorderable_grid_view/reorderable_grid_view.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
 
 // --- Import Custom Widgets and Models ---
-import '../models/weather_data.dart'; // Import the WeatherData model
-import '../widgets/at_a_glance_card.dart'; // Import the extracted AtAGlanceCard
-import '../widgets/news_feed_card.dart'; // Import the extracted NewsFeedCard
-import '../widgets/quick_notes_card.dart'; // Import the extracted QuickNotesCard
-import '../widgets/calendar_card.dart'; // Import the extracted CalendarCard
-import '../widgets/quick_links_card.dart'; // Import the extracted QuickLinksCard
-import '../widgets/daily_affirmation_card.dart'; // Import the extracted DailyAffirmationCard
-import '../widgets/quick_actions_card.dart'; // Import the new QuickActionsCard
+// Note: Adjust these import paths if your project structure is different.
+import '../models/weather_data.dart';
+import '../widgets/at_a_glance_card.dart';
+import '../widgets/news_feed_card.dart';
+import '../widgets/quick_notes_card.dart';
+import '../widgets/calendar_card.dart';
+import '../widgets/quick_links_card.dart';
+import '../widgets/daily_affirmation_card.dart';
+import '../widgets/quick_actions_card.dart';
+import '../widgets/countdown_card.dart'; // This now contains the CountdownEvent model
+import '../widgets/todo_list_card.dart';
+import '../widgets/youtube_card.dart';
 // ----------------------------------------
 
 /// Model to hold metadata for each dashboard widget.
-/// This simplifies management by removing the need for switch statements.
 class DashboardWidgetModel {
   final String id;
   final String displayName;
@@ -60,34 +51,46 @@ class _NativeWelcomePageState extends State<NativeWelcomePage> {
 
   List<String> _userWidgetOrder = [];
 
-  // REFACTORED: Now a map of widget IDs to a model containing all widget info.
+  // STATE LIFTED UP: This list is now a member of the main page state.
+  List<CountdownEvent> _allCountdownEvents = [];
+
   late final Map<String, DashboardWidgetModel> _availableWidgets;
 
   @override
   void initState() {
     super.initState();
     _updateGreetingAndDate();
+    _loadCountdownEvents(); // Load events when the app starts
 
-    // REFACTORED: Widget definitions now use the DashboardWidgetModel.
+    // Widget definitions are now built using the state variables.
+    _buildAvailableWidgets();
+    _loadUserWidgetOrder();
+  }
+
+  // This method is now separate to be rebuilt if state changes.
+  void _buildAvailableWidgets() {
     _availableWidgets = {
       'weather_card': DashboardWidgetModel(
         id: 'weather_card',
         displayName: 'At a Glance',
         builder: (context) => AtAGlanceCard(formattedDate: _formattedDate),
       ),
-      // UPDATED: Replaced inline implementation with the new QuickActionsCard widget.
       'quick_actions': DashboardWidgetModel(
         id: 'quick_actions',
         displayName: 'Quick Actions',
         builder: (context) => QuickActionsCard(onNavigateToTab: widget.onNavigateToTab),
       ),
-      // **UPDATED**: This widget will only be available if the app is NOT running on the web.
       if (!kIsWeb)
         'news_feed': DashboardWidgetModel(
           id: 'news_feed',
           displayName: 'Latest News',
           builder: (context) => const NewsFeedCard(),
         ),
+      'youtube_card': DashboardWidgetModel(
+        id: 'youtube_card',
+        displayName: 'Videos',
+        builder: (context) => const YoutubeCard(),
+      ),
       'quick_notes': DashboardWidgetModel(
         id: 'quick_notes',
         displayName: 'Quick Notes',
@@ -96,7 +99,8 @@ class _NativeWelcomePageState extends State<NativeWelcomePage> {
       'calendar_card': DashboardWidgetModel(
         id: 'calendar_card',
         displayName: 'My Calendar',
-        builder: (context) => const CalendarCard(),
+        // CORRECTED: Pass the state list of events directly.
+        builder: (context) => CalendarCard(events: _allCountdownEvents),
       ),
       'quick_links': DashboardWidgetModel(
         id: 'quick_links',
@@ -108,22 +112,56 @@ class _NativeWelcomePageState extends State<NativeWelcomePage> {
         displayName: 'Daily Affirmation',
         builder: (context) => const DailyAffirmationCard(),
       ),
+      'countdown': DashboardWidgetModel(
+        id: 'countdown',
+        displayName: 'Countdowns',
+        // CORRECTED: Pass the callback function to the CountdownCard.
+        builder: (context) => CountdownCard(onEventsUpdated: _updateEvents),
+      ),
+      'todo_list': DashboardWidgetModel(
+        id: 'todo_list',
+        displayName: 'To-Do List',
+        builder: (context) => const TodoListCard(),
+      ),
     };
-    _loadUserWidgetOrder();
   }
+
+  // --- Event State Management ---
+
+  // Callback function for the CountdownCard to send updates back to this page.
+  void _updateEvents(List<CountdownEvent> updatedEvents) {
+    setState(() {
+      _allCountdownEvents = updatedEvents;
+      // Rebuild the widget map to ensure CalendarCard gets the new list.
+      _buildAvailableWidgets();
+    });
+  }
+
+  // Load events from SharedPreferences
+  Future<void> _loadCountdownEvents() async {
+    final prefs = await SharedPreferences.getInstance();
+    final String? eventsString = prefs.getString('countdownEventsList'); // Use the same key as in CountdownCard
+    if (eventsString != null && mounted) {
+      final List<dynamic> eventsJson = json.decode(eventsString);
+      setState(() {
+        _allCountdownEvents = eventsJson.map((json) => CountdownEvent.fromJson(json)).toList();
+        _buildAvailableWidgets(); // Rebuild widgets after loading events
+      });
+    }
+  }
+
+  // --- User Widget Order Management ---
 
   Future<void> _loadUserWidgetOrder() async {
     final prefs = await SharedPreferences.getInstance();
     List<String>? savedOrder = prefs.getStringList('userWidgetOrder');
 
     if (savedOrder == null || savedOrder.isEmpty) {
-      // If no order is saved, use the default order from available widgets
       savedOrder = _availableWidgets.keys.toList();
     }
 
     if (mounted) {
       setState(() {
-        // Ensure all saved widgets still exist and add any new default widgets.
         _userWidgetOrder = savedOrder!.where((id) => _availableWidgets.containsKey(id)).toList();
         for (String defaultId in _availableWidgets.keys) {
           if (!_userWidgetOrder.contains(defaultId)) {
@@ -148,6 +186,9 @@ class _NativeWelcomePageState extends State<NativeWelcomePage> {
     _formattedDate = DateFormat('EEEE, d MMMM').format(now);
     if (mounted) setState(() {});
   }
+
+  // --- UI Build Methods (Dialogs, Layouts, etc.) ---
+  // (No changes needed in the methods below, they are included for completeness)
 
   void _showAddWidgetDialog() {
     final theme = Theme.of(context);
@@ -273,7 +314,6 @@ class _NativeWelcomePageState extends State<NativeWelcomePage> {
     );
   }
 
-  /// Builds the content for a single widget tile, including the remove button for edit mode.
   Widget _buildWidgetTile(BuildContext context, String widgetId) {
     final theme = Theme.of(context);
     final model = _availableWidgets[widgetId];
@@ -284,7 +324,7 @@ class _NativeWelcomePageState extends State<NativeWelcomePage> {
 
     return Stack(
       key: ValueKey(widgetId),
-      clipBehavior: Clip.none, // Allow the remove button to overflow the card bounds slightly
+      clipBehavior: Clip.none,
       children: [
         model.builder(context),
         Positioned(
@@ -310,7 +350,6 @@ class _NativeWelcomePageState extends State<NativeWelcomePage> {
     );
   }
 
-  /// Builds the single-column layout with reordering functionality for smaller screens.
   Widget _buildSingleColumnLayout(BuildContext context) {
     return ReorderableListView.builder(
       shrinkWrap: true,
@@ -358,7 +397,6 @@ class _NativeWelcomePageState extends State<NativeWelcomePage> {
     );
   }
 
-  /// Builds the two-column dashboard layout for larger screens.
   Widget _buildTwoColumnLayout(BuildContext context, BoxConstraints constraints) {
     if (!_isInEditMode) {
       return Wrap(
@@ -401,7 +439,6 @@ class _NativeWelcomePageState extends State<NativeWelcomePage> {
     );
   }
 
-  /// Builds an "empty state" UI when no widgets are present.
   Widget _buildEmptyState(BuildContext context) {
     final theme = Theme.of(context);
     return Center(
@@ -433,7 +470,6 @@ class _NativeWelcomePageState extends State<NativeWelcomePage> {
     );
   }
 
-  /// **UPDATED**: Builds the new header consistent with the HiCard app style.
   Widget _buildHeader(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
     final colorScheme = Theme.of(context).colorScheme;
@@ -471,7 +507,6 @@ class _NativeWelcomePageState extends State<NativeWelcomePage> {
               ],
             ),
           ),
-          // Add the "Done" button here, visible only in edit mode
           if (_isInEditMode)
             IconButton(
               icon: Icon(Icons.done_rounded, color: colorScheme.primary),
@@ -489,7 +524,6 @@ class _NativeWelcomePageState extends State<NativeWelcomePage> {
 
     return Scaffold(
       backgroundColor: colorScheme.surface,
-      // **UPDATED**: The body is now wrapped in a SafeArea widget.
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: () async {
@@ -501,7 +535,6 @@ class _NativeWelcomePageState extends State<NativeWelcomePage> {
           backgroundColor: colorScheme.surfaceContainerHighest,
           child: CustomScrollView(
             slivers: [
-              // **UPDATED**: The SliverAppBar has been replaced with the new header widget.
               SliverToBoxAdapter(
                 child: _buildHeader(context),
               ),

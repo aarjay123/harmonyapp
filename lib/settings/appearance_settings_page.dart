@@ -19,6 +19,14 @@ class AppearanceSettingsPage extends StatelessWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
+    // The 'dashboard' item has been removed as it is no longer optional.
+    const navItemNames = {
+      'food': 'Food Page',
+      'rewards': 'Rewards Page',
+      'hotel': 'Hotel Page',
+      'room_key': 'Room Key Page',
+    };
+
     return FutureBuilder<bool>(
       future: DeviceInfoHelper.supportsDynamicColor(),
       builder: (context, snapshot) {
@@ -36,7 +44,7 @@ class AppearanceSettingsPage extends StatelessWidget {
               label: "Theme",
               trailing: _buildThemeDropdown(context, themeProvider, colorScheme),
               isFirstItem: true,
-              isLastItem: false, // This will never be the last item in the group
+              isLastItem: false,
             ),
             SettingsListItem(
               icon: Icons.format_color_fill_rounded,
@@ -47,11 +55,7 @@ class AppearanceSettingsPage extends StatelessWidget {
                 onChanged: supportsDynamicColor
                     ? (value) => themeProvider.setUseDynamicColor(value)
                     : null,
-                activeColor: supportsDynamicColor
-                    ? null
-                    : colorScheme.onSurface.withOpacity(0.38),
               ),
-              // MODIFIED: This is never the last item because the "Use Material 3" toggle always follows it.
               isLastItem: false,
             ),
             SettingsListItem(
@@ -61,26 +65,49 @@ class AppearanceSettingsPage extends StatelessWidget {
               trailing: Switch(
                 value: useMaterial3,
                 onChanged: (value) => themeProvider.useMaterial3 = value,
-                activeColor: null,
               ),
-              // This is the last item ONLY if dynamic color is enabled, which hides the App Colours picker.
               isLastItem: dynamicColorEnabled,
             ),
-            // Conditionally show the color scheme picker if dynamic color is NOT enabled
             if (!dynamicColorEnabled)
               SettingsListItem(
                 icon: Icons.color_lens_rounded,
                 label: "App Colours",
                 trailing: _buildSchemeDropdown(context, themeProvider, colorScheme),
-                isLastItem: true, // This is always the last item in this conditional branch
+                isLastItem: true,
               ),
+
+            // --- UPDATED: Section Renamed and Restyled ---
+            const SettingsGroupTitle(title: "Add or Remove Features"),
+            // UPDATED: Now uses a list of SettingsListItem for a cleaner look.
+            ...navItemNames.entries.map((entry) {
+              final String id = entry.key;
+              final String name = entry.value;
+              final bool isVisible = themeProvider.visibleDestinations[id] ?? true;
+              // Determine if the item is first or last in the list for proper corner rounding.
+              final bool isFirst = id == navItemNames.keys.first;
+              final bool isLast = id == navItemNames.keys.last;
+
+              return SettingsListItem(
+                icon: Icons.visibility_rounded, // Using a generic icon for consistency
+                label: name,
+                trailing: Switch(
+                  value: isVisible,
+                  onChanged: (bool value) {
+                    themeProvider.updateDestinationVisibility(id, value);
+                  },
+                ),
+                isFirstItem: isFirst,
+                isLastItem: isLast,
+              );
+            }).toList(),
           ],
         );
       },
     );
   }
 
-  // Dropdown for selecting the app theme (Light, Dark, System)
+  // --- Helper methods for dropdowns (no changes needed here) ---
+
   Widget _buildThemeDropdown(BuildContext context, ThemeProvider provider, ColorScheme colorScheme) {
     return SizedBox(
       width: _dropdownWidth,
@@ -104,7 +131,6 @@ class AppearanceSettingsPage extends StatelessWidget {
     );
   }
 
-  // Dropdown for selecting a predefined color scheme
   Widget _buildSchemeDropdown(BuildContext context, ThemeProvider provider, ColorScheme colorScheme) {
     return SizedBox(
       width: _dropdownWidth,
@@ -129,7 +155,6 @@ class AppearanceSettingsPage extends StatelessWidget {
     );
   }
 
-  // Helper methods for consistent dropdown styling
   ButtonStyleData _dropdownButtonStyle(ColorScheme colorScheme) {
     return ButtonStyleData(
       height: 40,

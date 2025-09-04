@@ -7,7 +7,6 @@ import 'package:provider/provider.dart'; // State management
 import 'package:dynamic_color/dynamic_color.dart'; // For Material You dynamic colors (Android 12+)
 // InAppWebView might still be used by other sub-pages, but FullscreenMenuPage is replaced
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
-import 'package:intl/intl.dart'; // For date formatting in native_welcome_page
 import 'package:url_launcher/url_launcher.dart'; // NEW: For canLaunchUrl, launchUrl, LaunchMode
 
 // Import your own app files for theming, helpers, and UI components
@@ -28,9 +27,6 @@ import 'helpcenter/helpcenter_page.dart';
 
 // NEW: Import the custom AnimatedFabMenu widget
 import 'widgets/animated_fab_menu.dart'; // Make sure this path is correct
-
-// For platform-specific imports (e.g. non-web platforms)
-import 'dart:io' show Platform;
 
 // The main entry point of the Flutter app
 void main() {
@@ -130,8 +126,6 @@ class MyApp extends StatelessWidget {
           ),
           // More pronounced shadow for Material 2, subtle for Material 3
           elevation: themeProvider.useMaterial3 ? 1.0 : 4.0,
-          // You can also define the shadowColor if needed
-          // shadowColor: themeProvider.useMaterial3 ? null : Colors.black.withOpacity(0.3),
         );
 
 
@@ -146,6 +140,7 @@ class MyApp extends StatelessWidget {
               colorScheme: lightDynamic ?? lightColorScheme, // Use dynamic or fallback light scheme
               textTheme: ThemeData.light().textTheme.apply(fontFamily: 'Outfit'), // Custom font
               cardTheme: commonCardTheme, // Apply the common card theme
+              // FIXED: Removed 'const' because the for-loop makes it a non-constant expression.
               pageTransitionsTheme: PageTransitionsTheme(
                 builders: {
                   // Apply custom slide transition on all platforms
@@ -159,6 +154,7 @@ class MyApp extends StatelessWidget {
               colorScheme: darkDynamic ?? darkColorScheme, // Use dynamic or fallback dark scheme
               textTheme: ThemeData.dark().textTheme.apply(fontFamily: 'Outfit'),
               cardTheme: commonCardTheme, // Apply the common card theme
+              // FIXED: Removed 'const' because the for-loop makes it a non-constant expression.
               pageTransitionsTheme: PageTransitionsTheme(
                 builders: {
                   for (final platform in TargetPlatform.values)
@@ -187,10 +183,11 @@ class MyApp extends StatelessWidget {
             colorScheme: lightScheme,
             textTheme: ThemeData.light().textTheme.apply(fontFamily: 'Outfit'),
             cardTheme: commonCardTheme, // Apply the common card theme
+            // FIXED: Removed 'const' because the for-loop makes it a non-constant expression.
             pageTransitionsTheme: PageTransitionsTheme(
               builders: {
                 for (final platform in TargetPlatform.values)
-                  platform: GlobalSlidePageTransitionsBuilder(), // MODIFIED: Corrected to GlobalSlidePageTransitionsBuilder
+                  platform: GlobalSlidePageTransitionsBuilder(),
               },
             ),
           ),
@@ -199,10 +196,11 @@ class MyApp extends StatelessWidget {
             colorScheme: darkScheme,
             textTheme: ThemeData.dark().textTheme.apply(fontFamily: 'Outfit'),
             cardTheme: commonCardTheme, // Apply the common card theme
+            // FIXED: Removed 'const' because the for-loop makes it a non-constant expression.
             pageTransitionsTheme: PageTransitionsTheme(
               builders: {
                 for (final platform in TargetPlatform.values)
-                  platform: GlobalSlidePageTransitionsBuilder(), // MODIFIED: Corrected to GlobalSlidePageTransitionsBuilder
+                  platform: GlobalSlidePageTransitionsBuilder(),
               },
             ),
           ),
@@ -212,6 +210,22 @@ class MyApp extends StatelessWidget {
     );
   }
 }
+
+// NEW: A model to represent a navigation destination.
+class _AppDestination {
+  final String id;
+  final String label;
+  final IconData icon;
+  final Widget page;
+
+  const _AppDestination({
+    required this.id,
+    required this.label,
+    required this.icon,
+    required this.page,
+  });
+}
+
 
 // ResponsiveScaffold is the main UI scaffold that adapts navigation for wide or narrow screens
 class ResponsiveScaffold extends StatefulWidget {
@@ -227,46 +241,41 @@ class ResponsiveScaffold extends StatefulWidget {
 class _ResponsiveScaffoldState extends State<ResponsiveScaffold> {
   int _selectedIndex = 0; // Tracks currently selected navigation index
 
+  // NEW: A master list of all possible destinations.
+  late final List<_AppDestination> _allDestinations;
+
+  @override
+  void initState() {
+    super.initState();
+    // Initialize the master list here.
+    _allDestinations = [
+      _AppDestination(id: 'dashboard', label: 'Dashboard', icon: Icons.dashboard_rounded, page: NativeWelcomePage(onNavigateToTab: _onItemTapped)),
+      _AppDestination(id: 'food', label: 'Food', icon: Icons.restaurant_rounded, page: const RestaurantPage()),
+      _AppDestination(id: 'rewards', label: 'Rewards', icon: Icons.stars_rounded, page: const RewardsPage()),
+      _AppDestination(id: 'hotel', label: 'Hotel', icon: Icons.hotel_rounded, page: const HotelPage()),
+      _AppDestination(id: 'room_key', label: 'Room Key', icon: Icons.key_rounded, page: const RoomKeyPage()),
+    ];
+  }
+
+
   void _onItemTapped(int index) {
     setState(() {
       _selectedIndex = index;
     });
   }
 
-  void _showNoInternetDialog() {
-    if (!mounted) return;
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('No Internet Connection'),
-        content: const Text(
-          'Unable to load the page. Please check your internet connection and try again.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('OK'),
-          )
-        ],
-      ),
-    );
-  }
+  // UPDATED: This function now guarantees the dashboard is always included.
+  List<_AppDestination> _getVisibleDestinations(ThemeProvider themeProvider) {
+    // Start with the dashboard, which is always visible.
+    final List<_AppDestination> visible = [_allDestinations.first];
 
-  Widget _buildCurrentPage() {
-    switch (_selectedIndex) {
-      case 0:
-        return NativeWelcomePage(onNavigateToTab: _onItemTapped);
-      case 1:
-        return const RestaurantPage();
-      case 2:
-        return const RewardsPage();
-      case 3:
-        return const HotelPage();
-      case 4:
-        return const RoomKeyPage();
-      default:
-        return const Center(child: Text("Page not found."));
-    }
+    // Filter the rest of the destinations based on user settings.
+    final otherVisible = _allDestinations.skip(1).where((dest) {
+      return themeProvider.visibleDestinations[dest.id] ?? true;
+    });
+
+    visible.addAll(otherVisible);
+    return visible;
   }
 
 
@@ -274,7 +283,21 @@ class _ResponsiveScaffoldState extends State<ResponsiveScaffold> {
   Widget build(BuildContext context) {
     final bool isWideScreen = MediaQuery.of(context).size.width >= 600;
     final themeProvider = Provider.of<ThemeProvider>(context); // Get themeProvider here
-    final bool useMaterial3 = themeProvider.useMaterial3; // Get useMaterial3 state
+
+    // NEW: Dynamically build the list of destinations that should be visible.
+    final List<_AppDestination> visibleDestinations = _getVisibleDestinations(themeProvider);
+
+    // If the currently selected index is out of bounds (because an item was hidden),
+    // reset to the first page.
+    if (_selectedIndex >= visibleDestinations.length) {
+      // Use a post-frame callback to avoid calling setState during a build.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        setState(() {
+          _selectedIndex = 0;
+        });
+      });
+    }
+
 
     // Define the MiniFabItems based on the original FullscreenMenuPage items
     final List<MiniFabItem> menuFabItems = [
@@ -337,64 +360,46 @@ class _ResponsiveScaffoldState extends State<ResponsiveScaffold> {
       // MODIFIED: Removed AppBar entirely
       body: Row(
         children: [
-          if (isWideScreen) _buildNavigationRail(isWideScreen),
+          if (isWideScreen) _buildNavigationRail(isWideScreen, visibleDestinations),
           Expanded(
-            child: _buildCurrentPage(),
+            // Show the selected page from the visible list.
+            child: visibleDestinations.isEmpty
+                ? const Center(child: Text("An error has occurred.")) // Should not happen with dashboard always visible
+                : visibleDestinations[_selectedIndex].page,
           ),
         ],
       ),
       // MODIFIED: Conditionally render NavigationBar or BottomNavigationBar
-      bottomNavigationBar: isWideScreen ? null : _buildNavigationBar(useMaterial3),
+      bottomNavigationBar: isWideScreen ? null : _buildNavigationBar(themeProvider.useMaterial3, visibleDestinations),
       // NEW: Floating Action Button that expands into mini-FABs for menu items
       floatingActionButton: AnimatedFabMenu(fabItems: menuFabItems),
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat, // Position at bottom right
     );
   }
 
-  NavigationRail _buildNavigationRail(bool isWideScreen) {
+  // UPDATED: Now takes a list of destinations to build dynamically.
+  NavigationRail _buildNavigationRail(bool isWideScreen, List<_AppDestination> destinations) {
     return NavigationRail(
       selectedIndex: _selectedIndex,
       onDestinationSelected: _onItemTapped,
       labelType: isWideScreen
           ? NavigationRailLabelType.all
           : NavigationRailLabelType.none,
-      destinations: const [
-        NavigationRailDestination(
-            icon: Icon(Icons.dashboard_rounded), label: Text('Dashboard')),
-        NavigationRailDestination(
-            icon: Icon(Icons.restaurant_rounded), label: Text('Food')),
-        NavigationRailDestination(
-            icon: Icon(Icons.stars_rounded), label: Text('Rewards')),
-        NavigationRailDestination(
-            icon: Icon(Icons.hotel_rounded), label: Text('Hotel')),
-        NavigationRailDestination(
-            icon: Icon(Icons.key_rounded), label: Text('Room Key')),
-      ],
+      destinations: destinations.map((dest) {
+        return NavigationRailDestination(icon: Icon(dest.icon), label: Text(dest.label));
+      }).toList(),
     );
   }
 
-  // MODIFIED: Now accepts a boolean for useMaterial3
-  Widget _buildNavigationBar(bool useMaterial3) {
+  // UPDATED: Now takes a list of destinations to build dynamically.
+  Widget _buildNavigationBar(bool useMaterial3, List<_AppDestination> destinations) {
     if (useMaterial3) {
-      return Theme(
-        data: Theme.of(context).copyWith(
-          navigationBarTheme: const NavigationBarThemeData(
-            labelBehavior: NavigationDestinationLabelBehavior.alwaysHide,
-          ),
-        ),
-        child: NavigationBar(
-          selectedIndex: _selectedIndex,
-          onDestinationSelected: _onItemTapped,
-          height: 60,
-          elevation: 8,
-          destinations: const [
-            NavigationDestination(icon: Icon(Icons.dashboard_rounded), label: 'Dashboard'),
-            NavigationDestination(icon: Icon(Icons.restaurant_rounded), label: 'Food'),
-            NavigationDestination(icon: Icon(Icons.stars_rounded), label: 'Rewards'),
-            NavigationDestination(icon: Icon(Icons.hotel_rounded), label: 'Hotel'),
-            NavigationDestination(icon: Icon(Icons.key_rounded), label: 'Room Key'),
-          ],
-        ),
+      return NavigationBar(
+        selectedIndex: _selectedIndex,
+        onDestinationSelected: _onItemTapped,
+        destinations: destinations.map((dest) {
+          return NavigationDestination(icon: Icon(dest.icon), label: dest.label);
+        }).toList(),
       );
     } else {
       // Material 2 style BottomNavigationBar
@@ -402,20 +407,11 @@ class _ResponsiveScaffoldState extends State<ResponsiveScaffold> {
         currentIndex: _selectedIndex,
         onTap: _onItemTapped,
         type: BottomNavigationBarType.fixed, // Ensures all items are visible and evenly spaced
-        selectedItemColor: Theme.of(context).colorScheme.primary, // Use primary color for selected item
-        unselectedItemColor: Theme.of(context).colorScheme.onSurfaceVariant, // Use onSurfaceVariant for unselected
-        selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold),
-        unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.normal),
-        showSelectedLabels: false, // Hide labels for a cleaner Material 2 icon-only look
-        showUnselectedLabels: false, // Hide labels for a cleaner Material 2 icon-only look
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.dashboard_rounded), label: 'Dashboard'),
-          BottomNavigationBarItem(icon: Icon(Icons.restaurant_rounded), label: 'Food'),
-          BottomNavigationBarItem(icon: Icon(Icons.stars_rounded), label: 'Rewards'),
-          BottomNavigationBarItem(icon: Icon(Icons.hotel_rounded), label: 'Hotel'),
-          BottomNavigationBarItem(icon: Icon(Icons.key_rounded), label: 'Room Key'),
-        ],
+        items: destinations.map((dest) {
+          return BottomNavigationBarItem(icon: Icon(dest.icon), label: dest.label);
+        }).toList(),
       );
     }
   }
 }
+
