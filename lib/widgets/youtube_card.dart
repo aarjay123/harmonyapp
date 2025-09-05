@@ -1,8 +1,118 @@
 import 'package:flutter/material.dart';
-import 'package:youtube_player_flutter/youtube_player_flutter.dart';
+import 'package:flutter_inappwebview/flutter_inappwebview.dart';
+import 'package:flutter/gestures.dart';
+import 'package:flutter/foundation.dart' show Factory;
 import 'dart:math'; // Required for the Random() class
 
-/// A dashboard widget that displays a random YouTube video from a predefined list.
+// NOTE: This InteractiveWebView is a self-contained helper widget.
+// It's the same one used on your restaurant pages, included here for completeness.
+// It adds loading, error, and pull-to-refresh functionality.
+class InteractiveWebView extends StatefulWidget {
+  final String url;
+  const InteractiveWebView({super.key, required this.url});
+
+  @override
+  State<InteractiveWebView> createState() => _InteractiveWebViewState();
+}
+
+class _InteractiveWebViewState extends State<InteractiveWebView> {
+  late InAppWebViewController _webViewController;
+  PullToRefreshController? _pullToRefreshController;
+  double _progress = 0;
+  bool _hasError = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Initialization is moved to didChangeDependencies to safely access context.
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _pullToRefreshController ??= PullToRefreshController(
+      settings: PullToRefreshSettings(
+        color: Theme.of(context).colorScheme.primary,
+      ),
+      onRefresh: () async {
+        if (mounted) {
+          await _webViewController.reload();
+        }
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Stack(
+      children: [
+        InAppWebView(
+          key: ValueKey(widget.url),
+          initialUrlRequest: URLRequest(url: WebUri(widget.url)),
+          onWebViewCreated: (controller) {
+            _webViewController = controller;
+          },
+          pullToRefreshController: _pullToRefreshController,
+          onProgressChanged: (controller, progress) {
+            setState(() {
+              _progress = progress / 100;
+              if (progress == 100) {
+                _pullToRefreshController?.endRefreshing();
+              }
+            });
+          },
+          onLoadError: (controller, url, code, message) {
+            _pullToRefreshController?.endRefreshing();
+            setState(() => _hasError = true);
+          },
+          onLoadHttpError: (controller, url, statusCode, description) {
+            _pullToRefreshController?.endRefreshing();
+            setState(() => _hasError = true);
+          },
+          gestureRecognizers: <Factory<OneSequenceGestureRecognizer>>{
+            Factory<VerticalDragGestureRecognizer>(() => VerticalDragGestureRecognizer()),
+          },
+        ),
+        if (_progress < 1.0 && !_hasError)
+          LinearProgressIndicator(
+            value: _progress,
+            backgroundColor: theme.colorScheme.surfaceVariant,
+            valueColor: AlwaysStoppedAnimation<Color>(theme.colorScheme.primary),
+          ),
+        if (_hasError)
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.wifi_off_rounded, size: 48, color: theme.colorScheme.onSurfaceVariant),
+                  const SizedBox(height: 16),
+                  Text('Failed to load video', style: theme.textTheme.titleMedium, textAlign: TextAlign.center),
+                  const SizedBox(height: 24),
+                  FilledButton.icon(
+                    icon: const Icon(Icons.refresh_rounded),
+                    label: const Text('Retry'),
+                    onPressed: () {
+                      setState(() {
+                        _hasError = false;
+                        _progress = 0;
+                      });
+                      _webViewController.reload();
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+
+/// A dashboard widget that displays a random YouTube video using a web embed.
 class YoutubeCard extends StatefulWidget {
   const YoutubeCard({super.key});
 
@@ -11,11 +121,10 @@ class YoutubeCard extends StatefulWidget {
 }
 
 class _YoutubeCardState extends State<YoutubeCard> {
-  late YoutubePlayerController _controller;
-  late String _currentVideoId;
+  // Using a ValueNotifier to trigger rebuilds of the WebView when the URL changes.
+  late ValueNotifier<String> _currentVideoUrl;
   final _random = Random();
 
-  // A predefined list of YouTube video IDs to choose from.
   final List<String> _videoIds = const [
     '7By-gcfB_iY', // Welcome to WorstEastern
     'cr_hByEBpFg', // MyLad 2.0E
@@ -25,46 +134,38 @@ class _YoutubeCardState extends State<YoutubeCard> {
     'o50a0E7ibBg', // MyLap
   ];
 
+  // Helper to create the standard YouTube embed URL.
+  String _getEmbedUrl(String videoId) {
+    // Parameters to hide controls, related videos, etc., for a cleaner look.
+    return 'https://www.youtube.com/embed/$videoId?autoplay=0&controls=1&showinfo=0&rel=0';
+  }
+
   @override
   void initState() {
     super.initState();
-    // Select an initial random video ID from the list.
-    _currentVideoId = _videoIds[_random.nextInt(_videoIds.length)];
-
-    // Initialize the controller with the randomly selected video.
-    _controller = YoutubePlayerController(
-      initialVideoId: _currentVideoId,
-      flags: const YoutubePlayerFlags(
-        autoPlay: false,
-        mute: false,
-        forceHD: false,
-        showLiveFullscreenButton: false,
-      ),
-    );
+    // Select an initial random video ID and create the initial URL.
+    final initialVideoId = _videoIds[_random.nextInt(_videoIds.length)];
+    _currentVideoUrl = ValueNotifier(_getEmbedUrl(initialVideoId));
   }
 
-  /// Selects a new random video from the list and loads it into the player.
+  /// Selects a new random video from the list and updates the URL.
   void _playNextRandomVideo() {
-    String newVideoId = _currentVideoId;
-    // Ensure the new video is different from the current one, if possible.
+    String currentId = Uri.parse(_currentVideoUrl.value).pathSegments.last;
+    String newVideoId = currentId;
+
     if (_videoIds.length > 1) {
-      while (newVideoId == _currentVideoId) {
+      while (newVideoId == currentId) {
         newVideoId = _videoIds[_random.nextInt(_videoIds.length)];
       }
     }
 
-    // Update the state to reflect the new video ID and load it.
-    if (mounted) {
-      setState(() {
-        _currentVideoId = newVideoId;
-      });
-      _controller.load(_currentVideoId);
-    }
+    // Update the ValueNotifier, which will cause the listening widget to rebuild.
+    _currentVideoUrl.value = _getEmbedUrl(newVideoId);
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    _currentVideoUrl.dispose();
     super.dispose();
   }
 
@@ -81,7 +182,6 @@ class _YoutubeCardState extends State<YoutubeCard> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
             child: Row(
@@ -89,7 +189,7 @@ class _YoutubeCardState extends State<YoutubeCard> {
                 Icon(Icons.play_circle_fill_rounded, color: colorScheme.onSurfaceVariant),
                 const SizedBox(width: 12),
                 Text(
-                  "Video Player",
+                  "Videos",
                   style: theme.textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.w600,
                     color: colorScheme.onSurfaceVariant,
@@ -98,43 +198,18 @@ class _YoutubeCardState extends State<YoutubeCard> {
               ],
             ),
           ),
-          // YouTube Player
-          YoutubePlayerBuilder(
-            player: YoutubePlayer(
-              controller: _controller,
-              showVideoProgressIndicator: true,
-              progressIndicatorColor: colorScheme.primary,
-              progressColors: ProgressBarColors(
-                playedColor: colorScheme.primary,
-                handleColor: colorScheme.primary,
-              ),
-              // The thumbnail updates to the new random video.
-              thumbnail: DecoratedBox(
-                decoration: BoxDecoration(
-                  image: DecorationImage(
-                    image: NetworkImage(
-                      YoutubePlayer.getThumbnail(
-                        videoId: _currentVideoId,
-                        quality: ThumbnailQuality.high,
-                      ),
-                    ),
-                    fit: BoxFit.cover,
-                  ),
-                ),
-                child: Center(
-                  child: Icon(
-                    Icons.play_circle_fill_rounded,
-                    color: Colors.white.withOpacity(0.8),
-                    size: 50,
-                  ),
-                ),
-              ),
-            ),
-            builder: (context, player) {
-              return player;
+          // FIXED: Removed the Flexible widget that was causing the layout assertion error.
+          // The AspectRatio widget is sufficient to size the player correctly within the Column.
+          ValueListenableBuilder<String>(
+            valueListenable: _currentVideoUrl,
+            builder: (context, videoUrl, child) {
+              // Using AspectRatio to maintain the 16:9 video format.
+              return AspectRatio(
+                aspectRatio: 16 / 9,
+                child: InteractiveWebView(url: videoUrl),
+              );
             },
           ),
-          // "Play Another" button section
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: Column(
