@@ -40,14 +40,14 @@ class AppearanceSettingsPage extends StatelessWidget {
             // --- Theme & Colours Group ---
             const SettingsGroupTitle(title: "Theme & Colours"),
             SettingsListItem(
-              icon: Icons.brightness_6_rounded,
+              icon: Icons.brightness_6_outlined,
               label: "Theme",
               trailing: _buildThemeDropdown(context, themeProvider, colorScheme),
               isFirstItem: true,
               isLastItem: false,
             ),
             SettingsListItem(
-              icon: Icons.format_color_fill_rounded,
+              icon: Icons.format_color_fill_outlined,
               label: "Use Dynamic Colour",
               subtitle: "Uses colours from your wallpaper (Android 12+)",
               trailing: Switch(
@@ -56,21 +56,20 @@ class AppearanceSettingsPage extends StatelessWidget {
                     ? (value) => themeProvider.setUseDynamicColor(value)
                     : null,
               ),
-              isLastItem: false,
+              isLastItem: dynamicColorEnabled,
             ),
-            SettingsListItem(
-              icon: Icons.design_services_rounded,
+            /*SettingsListItem(
+              icon: Icons.interests_outlined,
               label: "Use Material 3 Design",
               subtitle: "Modern UI elements and features",
               trailing: Switch(
                 value: useMaterial3,
                 onChanged: (value) => themeProvider.useMaterial3 = value,
               ),
-              isLastItem: dynamicColorEnabled,
-            ),
+            ),*/
             if (!dynamicColorEnabled)
               SettingsListItem(
-                icon: Icons.color_lens_rounded,
+                icon: Icons.color_lens_outlined,
                 label: "App Colours",
                 trailing: _buildSchemeDropdown(context, themeProvider, colorScheme),
                 isLastItem: true,
@@ -88,7 +87,7 @@ class AppearanceSettingsPage extends StatelessWidget {
               final bool isLast = id == navItemNames.keys.last;
 
               return SettingsListItem(
-                icon: Icons.visibility_rounded, // Using a generic icon for consistency
+                icon: Icons.visibility, // Using a generic icon for consistency
                 label: name,
                 trailing: Switch(
                   value: isVisible,

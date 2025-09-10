@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:package_info_plus/package_info_plus.dart';
 
 // Local Imports
 import '../settings_ui_components.dart';
@@ -9,33 +8,12 @@ import 'appearance_settings_page.dart';
 import 'privacy_policy_page.dart';
 import 'websites_page.dart';
 import 'updates_page.dart';
-import 'apps_services_page.dart';
-import 'socials_page.dart';
+// NEW: Import the new about page
+import 'about_page.dart';
 
 
-class SettingsPage extends StatefulWidget {
+class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key});
-
-  @override
-  State<SettingsPage> createState() => _SettingsPageState();
-}
-
-class _SettingsPageState extends State<SettingsPage> {
-  String _version = '';
-
-  @override
-  void initState() {
-    super.initState();
-    _loadVersionInfo();
-  }
-
-  // Fetches the app version to display in the about dialog.
-  Future<void> _loadVersionInfo() async {
-    final info = await PackageInfo.fromPlatform();
-    setState(() {
-      _version = '${info.version}+${info.buildNumber}';
-    });
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -45,54 +23,38 @@ class _SettingsPageState extends State<SettingsPage> {
         // --- General Group ---
         const SettingsGroupTitle(title: "General"),
         SettingsListItem(
-          icon: Icons.palette_rounded,
+          icon: Icons.palette_outlined,
           label: "Appearance",
           onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AppearanceSettingsPage()),
           ),
           isFirstItem: true,
         ),
         SettingsListItem(
-          icon: Icons.system_update_rounded,
+          icon: Icons.system_update,
           label: "Updates",
           onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const UpdatesPage()),
           ),
         ),
         SettingsListItem(
-          icon: Icons.apps_rounded,
-          label: "Apps & Services",
-          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AppsServicesPage()),
-          ),
-        ),
-        SettingsListItem(
-          icon: Icons.language_rounded,
+          icon: Icons.language_outlined,
           label: "Websites",
           onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const WebsitesPage()),
           ),
-        ),
-        SettingsListItem(
-          icon: Icons.people_rounded,
-          label: "Socials",
-          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SocialsPage()),
-          ),
+          // UPDATED: isLastItem is now true
           isLastItem: true,
         ),
 
         // --- About Group ---
         const SettingsGroupTitle(title: "About"),
         SettingsListItem(
-          icon: Icons.perm_device_info_rounded,
+          icon: Icons.info_outline,
           label: "About App",
-          onTap: () => showAboutDialog(
-            context: context,
-            applicationName: 'Harmony by The Highland Cafe',
-            applicationVersion: _version,
-            applicationLegalese:
-            'Copyright © The Highland Cafe™ Ltd. 2025. All rights Reserved.',
-          ),
+          // UPDATED: onTap now navigates to the new AboutAppPage.
+          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AboutAppPage())),
           isFirstItem: true,
         ),
         SettingsListItem(
-          icon: Icons.privacy_tip_rounded,
+          icon: Icons.privacy_tip_outlined,
           label: "Privacy Policy",
           onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const PrivacyPolicyPage()),
           ),

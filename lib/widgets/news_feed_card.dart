@@ -119,7 +119,7 @@ class _NewsFeedCardState extends State<NewsFeedCard> {
 
     return Card(
       elevation: 0, // Flat card design
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.0)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(0.0)),
       color: colorScheme.tertiaryContainer, // Uses tertiary container color for distinct look
       child: Padding(
         padding: const EdgeInsets.all(20.0), // Consistent internal padding

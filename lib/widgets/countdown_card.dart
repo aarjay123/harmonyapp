@@ -136,7 +136,7 @@ class _CountdownCardState extends State<CountdownCard> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.0)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20.0)),
         title: const Text('Add New Countdown'),
         content: TextField(
           controller: _eventNameController,
@@ -189,8 +189,8 @@ class _CountdownCardState extends State<CountdownCard> {
 
     return Card(
       elevation: 0,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.0)),
-      color: colorScheme.surfaceContainer,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(0.0)),
+      color: colorScheme.primaryContainer,
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(

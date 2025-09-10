@@ -176,7 +176,7 @@ class _YoutubeCardState extends State<YoutubeCard> {
 
     return Card(
       elevation: 0,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.0)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(0.0)),
       color: colorScheme.surfaceVariant,
       clipBehavior: Clip.antiAlias,
       child: Column(
@@ -186,7 +186,7 @@ class _YoutubeCardState extends State<YoutubeCard> {
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
             child: Row(
               children: [
-                Icon(Icons.play_circle_fill_rounded, color: colorScheme.onSurfaceVariant),
+                Icon(Icons.ondemand_video_outlined, color: colorScheme.onSurfaceVariant),
                 const SizedBox(width: 12),
                 Text(
                   "Videos",

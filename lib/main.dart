@@ -211,17 +211,19 @@ class MyApp extends StatelessWidget {
   }
 }
 
-// NEW: A model to represent a navigation destination.
+// UPDATED: The model now holds separate icons for selected and unselected states.
 class _AppDestination {
   final String id;
   final String label;
   final IconData icon;
+  final IconData selectedIcon; // New property for the filled/selected icon
   final Widget page;
 
   const _AppDestination({
     required this.id,
     required this.label,
     required this.icon,
+    required this.selectedIcon,
     required this.page,
   });
 }
@@ -241,7 +243,7 @@ class ResponsiveScaffold extends StatefulWidget {
 class _ResponsiveScaffoldState extends State<ResponsiveScaffold> {
   int _selectedIndex = 0; // Tracks currently selected navigation index
 
-  // NEW: A master list of all possible destinations.
+  // UPDATED: The master list of destinations now includes both icon variants.
   late final List<_AppDestination> _allDestinations;
 
   @override
@@ -249,11 +251,11 @@ class _ResponsiveScaffoldState extends State<ResponsiveScaffold> {
     super.initState();
     // Initialize the master list here.
     _allDestinations = [
-      _AppDestination(id: 'dashboard', label: 'Dashboard', icon: Icons.dashboard_rounded, page: NativeWelcomePage(onNavigateToTab: _onItemTapped)),
-      _AppDestination(id: 'food', label: 'Food', icon: Icons.restaurant_rounded, page: const RestaurantPage()),
-      _AppDestination(id: 'rewards', label: 'Rewards', icon: Icons.stars_rounded, page: const RewardsPage()),
-      _AppDestination(id: 'hotel', label: 'Hotel', icon: Icons.hotel_rounded, page: const HotelPage()),
-      _AppDestination(id: 'room_key', label: 'Room Key', icon: Icons.key_rounded, page: const RoomKeyPage()),
+      _AppDestination(id: 'dashboard', label: 'Home', icon: Icons.home_outlined, selectedIcon: Icons.home, page: NativeWelcomePage(onNavigateToTab: _onItemTapped)),
+      _AppDestination(id: 'food', label: 'Food', icon: Icons.restaurant_outlined, selectedIcon: Icons.restaurant, page: const RestaurantPage()),
+      _AppDestination(id: 'rewards', label: 'Rewards', icon: Icons.stars, selectedIcon: Icons.stars, page: const RewardsPage()),
+      _AppDestination(id: 'hotel', label: 'Hotel', icon: Icons.hotel_outlined, selectedIcon: Icons.hotel, page: const HotelPage()),
+      _AppDestination(id: 'room_key', label: 'Room Key', icon: Icons.key_outlined, selectedIcon: Icons.key, page: const RoomKeyPage()),
     ];
   }
 
@@ -264,7 +266,7 @@ class _ResponsiveScaffoldState extends State<ResponsiveScaffold> {
     });
   }
 
-  // UPDATED: This function now guarantees the dashboard is always included.
+  // This function now guarantees the dashboard is always included.
   List<_AppDestination> _getVisibleDestinations(ThemeProvider themeProvider) {
     // Start with the dashboard, which is always visible.
     final List<_AppDestination> visible = [_allDestinations.first];
@@ -284,7 +286,7 @@ class _ResponsiveScaffoldState extends State<ResponsiveScaffold> {
     final bool isWideScreen = MediaQuery.of(context).size.width >= 600;
     final themeProvider = Provider.of<ThemeProvider>(context); // Get themeProvider here
 
-    // NEW: Dynamically build the list of destinations that should be visible.
+    // Dynamically build the list of destinations that should be visible.
     final List<_AppDestination> visibleDestinations = _getVisibleDestinations(themeProvider);
 
     // If the currently selected index is out of bounds (because an item was hidden),
@@ -302,7 +304,7 @@ class _ResponsiveScaffoldState extends State<ResponsiveScaffold> {
     // Define the MiniFabItems based on the original FullscreenMenuPage items
     final List<MiniFabItem> menuFabItems = [
       MiniFabItem(
-        icon: Icons.download_for_offline_rounded,
+        icon: Icons.download_for_offline_outlined,
         label: 'Download Menus',
         onTap: () async {
           const url = 'https://www.dropbox.com/scl/fo/7gmlnnjcau1np91ee83ht/h?rlkey=ifj506k3aal7ko7tfecy8oqyq&dl=0';
@@ -319,7 +321,7 @@ class _ResponsiveScaffoldState extends State<ResponsiveScaffold> {
         },
       ),
       MiniFabItem(
-        icon: Icons.settings_rounded,
+        icon: Icons.settings_outlined,
         label: 'Settings',
         onTap: () {
           if (context.mounted) {
@@ -337,7 +339,7 @@ class _ResponsiveScaffoldState extends State<ResponsiveScaffold> {
         },
       ),
       MiniFabItem(
-        icon: Icons.web_rounded,
+        icon: Icons.web_outlined,
         label: 'Visit Blog',
         onTap: () async {
           const url = 'https://hienterprises.blogspot.com';
@@ -357,7 +359,6 @@ class _ResponsiveScaffoldState extends State<ResponsiveScaffold> {
 
 
     return Scaffold(
-      // MODIFIED: Removed AppBar entirely
       body: Row(
         children: [
           if (isWideScreen) _buildNavigationRail(isWideScreen, visibleDestinations),
@@ -369,15 +370,13 @@ class _ResponsiveScaffoldState extends State<ResponsiveScaffold> {
           ),
         ],
       ),
-      // MODIFIED: Conditionally render NavigationBar or BottomNavigationBar
       bottomNavigationBar: isWideScreen ? null : _buildNavigationBar(themeProvider.useMaterial3, visibleDestinations),
-      // NEW: Floating Action Button that expands into mini-FABs for menu items
       floatingActionButton: AnimatedFabMenu(fabItems: menuFabItems),
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat, // Position at bottom right
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );
   }
 
-  // UPDATED: Now takes a list of destinations to build dynamically.
+  // UPDATED: Now uses the `selectedIcon` property for a cleaner implementation.
   NavigationRail _buildNavigationRail(bool isWideScreen, List<_AppDestination> destinations) {
     return NavigationRail(
       selectedIndex: _selectedIndex,
@@ -386,19 +385,27 @@ class _ResponsiveScaffoldState extends State<ResponsiveScaffold> {
           ? NavigationRailLabelType.all
           : NavigationRailLabelType.none,
       destinations: destinations.map((dest) {
-        return NavigationRailDestination(icon: Icon(dest.icon), label: Text(dest.label));
+        return NavigationRailDestination(
+          icon: Icon(dest.icon),
+          selectedIcon: Icon(dest.selectedIcon), // Use the filled icon for the selected state
+          label: Text(dest.label),
+        );
       }).toList(),
     );
   }
 
-  // UPDATED: Now takes a list of destinations to build dynamically.
+  // UPDATED: Now uses the `selectedIcon` property for M3 and dynamic icons for M2.
   Widget _buildNavigationBar(bool useMaterial3, List<_AppDestination> destinations) {
     if (useMaterial3) {
       return NavigationBar(
         selectedIndex: _selectedIndex,
         onDestinationSelected: _onItemTapped,
         destinations: destinations.map((dest) {
-          return NavigationDestination(icon: Icon(dest.icon), label: dest.label);
+          return NavigationDestination(
+            icon: Icon(dest.icon),
+            selectedIcon: Icon(dest.selectedIcon), // Use the filled icon for the selected state
+            label: dest.label,
+          );
         }).toList(),
       );
     } else {
@@ -406,12 +413,17 @@ class _ResponsiveScaffoldState extends State<ResponsiveScaffold> {
       return BottomNavigationBar(
         currentIndex: _selectedIndex,
         onTap: _onItemTapped,
-        type: BottomNavigationBarType.fixed, // Ensures all items are visible and evenly spaced
-        items: destinations.map((dest) {
-          return BottomNavigationBarItem(icon: Icon(dest.icon), label: dest.label);
+        type: BottomNavigationBarType.fixed,
+        // Dynamically build the items, choosing the correct icon based on the selected index.
+        items: destinations.asMap().entries.map((entry) {
+          final int index = entry.key;
+          final _AppDestination dest = entry.value;
+          return BottomNavigationBarItem(
+            icon: Icon(_selectedIndex == index ? dest.selectedIcon : dest.icon),
+            label: dest.label,
+          );
         }).toList(),
       );
     }
   }
 }
-

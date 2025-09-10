@@ -52,7 +52,7 @@ class _QuickNotesCardState extends State<QuickNotesCard> {
 
     return Card(
       elevation: 0, // Flat card design
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.0)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(0.0)),
       color: colorScheme.primaryContainer, // Can choose a different color scheme if desired
       child: Padding(
         padding: const EdgeInsets.all(20.0), // Consistent internal padding

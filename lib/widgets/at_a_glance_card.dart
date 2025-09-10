@@ -310,7 +310,7 @@ class _AtAGlanceCardState extends State<AtAGlanceCard> {
 
     return Card(
       elevation: 0, // No shadow for this card, as it's part of the main layout
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.0)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(0.0)),
       color: theme.colorScheme.secondaryContainer, // Uses the secondary container color
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),

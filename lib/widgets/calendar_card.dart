@@ -64,7 +64,7 @@ class _CalendarCardState extends State<CalendarCard> {
 
     return Card(
       elevation: 0,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.0)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(0.0)),
       color: colorScheme.surfaceVariant,
       child: Padding(
         padding: const EdgeInsets.all(20.0),
