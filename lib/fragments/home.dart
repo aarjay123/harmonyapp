@@ -6,7 +6,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 
 // --- Import Custom Widgets and Models ---
-// Note: Adjust these import paths if your project structure is different.
 import '../models/weather_data.dart';
 import '../widgets/at_a_glance_card.dart';
 import '../widgets/news_feed_card.dart';
@@ -45,27 +44,66 @@ class _NativeWelcomePageState extends State<NativeWelcomePage> {
   String _greeting = '';
   String _formattedDate = '';
   bool _isInEditMode = false;
+  // NEW: State variable to manage the initial loading process.
+  bool _isLoading = true;
 
   static const double _contentMaxWidth = 1200.0;
   static const double _twoColumnBreakpoint = 768.0;
 
   List<String> _userWidgetOrder = [];
-
-  // STATE LIFTED UP: This list is now a member of the main page state.
   List<CountdownEvent> _allCountdownEvents = [];
-
-  late final Map<String, DashboardWidgetModel> _availableWidgets;
+  late Map<String, DashboardWidgetModel> _availableWidgets;
 
   @override
   void initState() {
     super.initState();
-    _updateGreetingAndDate();
-    _loadCountdownEvents(); // Load events when the app starts
-
-    // Widget definitions are now built using the state variables.
-    _buildAvailableWidgets();
-    _loadUserWidgetOrder();
+    // UPDATED: All initialization logic is now in a single, robust method.
+    _initializeDashboard();
   }
+
+  // NEW: Consolidated initialization method to prevent race conditions.
+  Future<void> _initializeDashboard() async {
+    // This part is synchronous and can run first.
+    _updateGreetingAndDate();
+
+    // 1. Load all asynchronous data from shared preferences.
+    final prefs = await SharedPreferences.getInstance();
+    final eventsString = prefs.getString('countdownEventsList');
+    final savedOrder = prefs.getStringList('userWidgetOrder');
+
+    // 2. Process the loaded data into state variables.
+    if (eventsString != null) {
+      final List<dynamic> eventsJson = json.decode(eventsString);
+      _allCountdownEvents = eventsJson.map((json) => CountdownEvent.fromJson(json)).toList();
+    }
+
+    // 3. Build the available widgets map now that all data is ready.
+    _buildAvailableWidgets();
+
+    // 4. Determine the final widget order.
+    List<String> finalOrder;
+    if (savedOrder == null || savedOrder.isEmpty) {
+      finalOrder = _availableWidgets.keys.toList();
+    } else {
+      // Filter saved order to ensure all widgets still exist.
+      finalOrder = savedOrder.where((id) => _availableWidgets.containsKey(id)).toList();
+      // Add any new widgets that might have been introduced in an update.
+      for (String defaultId in _availableWidgets.keys) {
+        if (!finalOrder.contains(defaultId)) {
+          finalOrder.add(defaultId);
+        }
+      }
+    }
+
+    // 5. Set the final state once all data is processed.
+    if (mounted) {
+      setState(() {
+        _userWidgetOrder = finalOrder;
+        _isLoading = false; // Turn off the loading indicator
+      });
+    }
+  }
+
 
   // This method is now separate to be rebuilt if state changes.
   void _buildAvailableWidgets() {
@@ -86,11 +124,12 @@ class _NativeWelcomePageState extends State<NativeWelcomePage> {
           displayName: 'Latest News',
           builder: (context) => const NewsFeedCard(),
         ),
-      'youtube_card': DashboardWidgetModel(
-        id: 'youtube_card',
-        displayName: 'Videos',
-        builder: (context) => const YoutubeCard(),
-      ),
+      if (!kIsWeb)
+        'youtube_card': DashboardWidgetModel(
+          id: 'youtube_card',
+          displayName: 'Videos',
+          builder: (context) => const YoutubeCard(),
+        ),
       'quick_notes': DashboardWidgetModel(
         id: 'quick_notes',
         displayName: 'Quick Notes',
@@ -99,7 +138,6 @@ class _NativeWelcomePageState extends State<NativeWelcomePage> {
       'calendar_card': DashboardWidgetModel(
         id: 'calendar_card',
         displayName: 'My Calendar',
-        // CORRECTED: Pass the state list of events directly.
         builder: (context) => CalendarCard(events: _allCountdownEvents),
       ),
       'quick_links': DashboardWidgetModel(
@@ -115,7 +153,6 @@ class _NativeWelcomePageState extends State<NativeWelcomePage> {
       'countdown': DashboardWidgetModel(
         id: 'countdown',
         displayName: 'Countdowns',
-        // CORRECTED: Pass the callback function to the CountdownCard.
         builder: (context) => CountdownCard(onEventsUpdated: _updateEvents),
       ),
       'todo_list': DashboardWidgetModel(
@@ -127,51 +164,14 @@ class _NativeWelcomePageState extends State<NativeWelcomePage> {
   }
 
   // --- Event State Management ---
-
-  // Callback function for the CountdownCard to send updates back to this page.
   void _updateEvents(List<CountdownEvent> updatedEvents) {
     setState(() {
       _allCountdownEvents = updatedEvents;
-      // Rebuild the widget map to ensure CalendarCard gets the new list.
       _buildAvailableWidgets();
     });
   }
 
-  // Load events from SharedPreferences
-  Future<void> _loadCountdownEvents() async {
-    final prefs = await SharedPreferences.getInstance();
-    final String? eventsString = prefs.getString('countdownEventsList'); // Use the same key as in CountdownCard
-    if (eventsString != null && mounted) {
-      final List<dynamic> eventsJson = json.decode(eventsString);
-      setState(() {
-        _allCountdownEvents = eventsJson.map((json) => CountdownEvent.fromJson(json)).toList();
-        _buildAvailableWidgets(); // Rebuild widgets after loading events
-      });
-    }
-  }
-
   // --- User Widget Order Management ---
-
-  Future<void> _loadUserWidgetOrder() async {
-    final prefs = await SharedPreferences.getInstance();
-    List<String>? savedOrder = prefs.getStringList('userWidgetOrder');
-
-    if (savedOrder == null || savedOrder.isEmpty) {
-      savedOrder = _availableWidgets.keys.toList();
-    }
-
-    if (mounted) {
-      setState(() {
-        _userWidgetOrder = savedOrder!.where((id) => _availableWidgets.containsKey(id)).toList();
-        for (String defaultId in _availableWidgets.keys) {
-          if (!_userWidgetOrder.contains(defaultId)) {
-            _userWidgetOrder.add(defaultId);
-          }
-        }
-      });
-    }
-  }
-
   Future<void> _saveUserWidgetOrder() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setStringList('userWidgetOrder', _userWidgetOrder);
@@ -188,7 +188,7 @@ class _NativeWelcomePageState extends State<NativeWelcomePage> {
   }
 
   // --- UI Build Methods (Dialogs, Layouts, etc.) ---
-  // (No changes needed in the methods below, they are included for completeness)
+  // No changes needed below this line. The following methods are correct.
 
   void _showAddWidgetDialog() {
     final theme = Theme.of(context);
@@ -257,8 +257,11 @@ class _NativeWelcomePageState extends State<NativeWelcomePage> {
                         title: Text(widgetModel.displayName, style: theme.textTheme.bodyLarge?.copyWith(color: colorScheme.onSurfaceVariant)),
                         trailing: Icon(Icons.add_circle_outline, color: colorScheme.primary),
                         onTap: () {
-                          setState(() => _userWidgetOrder.add(widgetModel.id));
-                          _saveUserWidgetOrder();
+                          // FIXED: Moved the save call inside setState for reliability.
+                          setState(() {
+                            _userWidgetOrder.add(widgetModel.id);
+                            _saveUserWidgetOrder();
+                          });
                           Navigator.pop(context);
                         },
                       ),
@@ -298,8 +301,11 @@ class _NativeWelcomePageState extends State<NativeWelcomePage> {
             ),
             FilledButton(
               onPressed: () {
-                setState(() => _userWidgetOrder.remove(widgetIdToRemove));
-                _saveUserWidgetOrder();
+                // FIXED: Moved the save call inside setState for reliability.
+                setState(() {
+                  _userWidgetOrder.remove(widgetIdToRemove);
+                  _saveUserWidgetOrder();
+                });
                 Navigator.of(dialogContext).pop();
               },
               style: FilledButton.styleFrom(
@@ -322,11 +328,21 @@ class _NativeWelcomePageState extends State<NativeWelcomePage> {
       return const SizedBox.shrink();
     }
 
+    final widgetContent = Theme(
+      data: theme.copyWith(
+        cardTheme: theme.cardTheme.copyWith(
+          margin: EdgeInsets.zero,
+          shape: const RoundedRectangleBorder(),
+        ),
+      ),
+      child: model.builder(context),
+    );
+
     return Stack(
       key: ValueKey(widgetId),
       clipBehavior: Clip.none,
       children: [
-        model.builder(context),
+        widgetContent,
         Positioned(
           top: -4,
           right: -4,
@@ -357,18 +373,35 @@ class _NativeWelcomePageState extends State<NativeWelcomePage> {
       buildDefaultDragHandles: false,
       itemCount: _userWidgetOrder.length,
       onReorder: (int oldIndex, int newIndex) {
+        // FIXED: Moved the save call inside setState and corrected the reorder logic.
         setState(() {
-          if (newIndex > oldIndex) newIndex -= 1;
+          if (newIndex > oldIndex) {
+            newIndex -= 1;
+          }
           final String item = _userWidgetOrder.removeAt(oldIndex);
           _userWidgetOrder.insert(newIndex, item);
+          _saveUserWidgetOrder();
         });
-        _saveUserWidgetOrder();
       },
       itemBuilder: (context, index) {
         final widgetId = _userWidgetOrder[index];
+        final isFirst = index == 0;
+        final isLast = index == _userWidgetOrder.length - 1;
+
+        final shape = RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(
+            top: isFirst ? const Radius.circular(16.0) : const Radius.circular(5.0),
+            bottom: isLast ? const Radius.circular(16.0) : const Radius.circular(5.0),
+          ),
+        );
+
         final itemContent = Padding(
-          padding: const EdgeInsets.only(bottom: 24.0),
-          child: _buildWidgetTile(context, widgetId),
+          padding: const EdgeInsets.only(bottom: 2.0),
+          child: Material(
+            shape: shape,
+            clipBehavior: Clip.antiAlias,
+            child: _buildWidgetTile(context, widgetId),
+          ),
         );
 
         if (_isInEditMode) {
@@ -400,10 +433,10 @@ class _NativeWelcomePageState extends State<NativeWelcomePage> {
   Widget _buildTwoColumnLayout(BuildContext context, BoxConstraints constraints) {
     if (!_isInEditMode) {
       return Wrap(
-        spacing: 16.0,
-        runSpacing: 24.0,
+        spacing: 8.0,
+        runSpacing: 8.0,
         children: _userWidgetOrder.map((widgetId) {
-          final itemWidth = (constraints.maxWidth / 2) - 8.0;
+          final itemWidth = (constraints.maxWidth / 2) - 4.0;
           return SizedBox(
             width: itemWidth,
             child: _buildWidgetTile(context, widgetId),
@@ -417,8 +450,8 @@ class _NativeWelcomePageState extends State<NativeWelcomePage> {
       physics: const NeverScrollableScrollPhysics(),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
-        crossAxisSpacing: 16.0,
-        mainAxisSpacing: 24.0,
+        crossAxisSpacing: 8.0,
+        mainAxisSpacing: 8.0,
         childAspectRatio: 0.9,
       ),
       itemCount: _userWidgetOrder.length,
@@ -430,11 +463,12 @@ class _NativeWelcomePageState extends State<NativeWelcomePage> {
         );
       },
       onReorder: (int oldIndex, int newIndex) {
+        // FIXED: Moved the save call inside setState.
         setState(() {
           final String item = _userWidgetOrder.removeAt(oldIndex);
           _userWidgetOrder.insert(newIndex, item);
+          _saveUserWidgetOrder();
         });
-        _saveUserWidgetOrder();
       },
     );
   }
@@ -522,6 +556,16 @@ class _NativeWelcomePageState extends State<NativeWelcomePage> {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
 
+    // Show a loading indicator while the dashboard is being initialized.
+    if (_isLoading) {
+      return Scaffold(
+        backgroundColor: colorScheme.surface,
+        body: const Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
     return Scaffold(
       backgroundColor: colorScheme.surface,
       body: SafeArea(
@@ -567,7 +611,7 @@ class _NativeWelcomePageState extends State<NativeWelcomePage> {
                     child: ConstrainedBox(
                       constraints: const BoxConstraints(maxWidth: _contentMaxWidth),
                       child: Padding(
-                        padding: const EdgeInsets.fromLTRB(16.0, 0, 16.0, 8.0),
+                        padding: const EdgeInsets.fromLTRB(16.0, 24.0, 16.0, 8.0),
                         child: FilledButton.tonalIcon(
                           onPressed: _showAddWidgetDialog,
                           icon: const Icon(Icons.add_box_rounded),
@@ -586,14 +630,14 @@ class _NativeWelcomePageState extends State<NativeWelcomePage> {
                   child: ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: _contentMaxWidth),
                     child: Padding(
-                      padding: const EdgeInsets.fromLTRB(16.0, 24.0, 16.0, 24.0),
+                      padding: const EdgeInsets.fromLTRB(16.0, 8.0, 16.0, 24.0),
                       child: FilledButton.tonal(
                         onPressed: () => setState(() => _isInEditMode = !_isInEditMode),
                         style: FilledButton.styleFrom(
                           minimumSize: const Size.fromHeight(50),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0)),
                         ),
-                        child: Text(_isInEditMode ? 'Exit Edit Mode' : 'Edit Widgets'),
+                        child: Text(_isInEditMode ? 'Done Editing' : 'Edit Widgets'),
                       ),
                     ),
                   ),

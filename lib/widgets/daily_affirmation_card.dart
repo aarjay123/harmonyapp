@@ -74,7 +74,7 @@ class _DailyAffirmationCardState extends State<DailyAffirmationCard> {
 
     return Card(
       elevation: 0, // Flat card design
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.0)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.0)),
       color: colorScheme.secondaryContainer, // Uses secondary container color for differentiation
       child: Padding(
         padding: const EdgeInsets.all(20.0), // Consistent internal padding

@@ -132,8 +132,8 @@ class _TodoListCardState extends State<TodoListCard> {
 
     return Card(
       elevation: 0,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.0)),
-      color: colorScheme.surfaceContainer,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(0.0)),
+      color: colorScheme.secondaryContainer,
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(

@@ -136,8 +136,8 @@ class _QuickLinksCardState extends State<QuickLinksCard> {
 
     return Card(
       elevation: 0, // Flat card design
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.0)),
-      color: colorScheme.surfaceContainerHighest, // Uses a distinct surface color
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(0.0)),
+      color: colorScheme.tertiaryContainer, // Uses a distinct surface color
       child: Padding(
         padding: const EdgeInsets.all(20.0), // Consistent internal padding
         child: Column(

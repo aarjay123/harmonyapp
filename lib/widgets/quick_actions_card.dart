@@ -20,8 +20,9 @@ class QuickAction {
 // You can add or remove items from this list.
 const List<QuickAction> allAvailableActions = [
   QuickAction(id: 'food', label: 'Order Food', icon: Icons.restaurant_rounded, tabIndex: 1),
-  QuickAction(id: 'stay', label: 'Book Stay', icon: Icons.hotel_rounded, tabIndex: 2),
-  QuickAction(id: 'roomkey', label: 'View Room Key', icon: Icons.key_rounded, tabIndex: 3),
+  QuickAction(id: 'hirewards', label: 'HiRewards', icon: Icons.stars_rounded, tabIndex: 2),
+  QuickAction(id: 'stay', label: 'Book a Room', icon: Icons.hotel_rounded, tabIndex: 3),
+  QuickAction(id: 'roomkey', label: 'View Room Key', icon: Icons.key_rounded, tabIndex: 4),
 ];
 
 class QuickActionsCard extends StatefulWidget {
@@ -133,7 +134,7 @@ class _QuickActionsCardState extends State<QuickActionsCard> {
     return Card(
       elevation: 0,
       color: theme.colorScheme.surfaceVariant.withAlpha(150),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20.0)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(0.0)),
       child: Padding(
         padding: const EdgeInsets.all(20.0),
         child: Column(
