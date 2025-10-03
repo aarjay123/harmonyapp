@@ -39,12 +39,12 @@ class WebsitesPage extends StatelessWidget {
         ),
         SettingsListItem(
           icon: Icons.developer_mode_rounded,
-          label: "HiDev",
-          onTap: () => _launchExternalUrl(context, 'https://sites.google.com/view/nuggetdev'),
+          label: "nuggetdev",
+          onTap: () => _launchExternalUrl(context, 'https://hienterprises.github.io/nuggetdev/home'),
         ),
         SettingsListItem(
           icon: Icons.dashboard_rounded,
-          label: "Harmony Website",
+          label: "Harmony",
           onTap: () => _launchExternalUrl(context, 'https://hienterprises.github.io/harmony/home'),
           isLastItem: true,
         ),

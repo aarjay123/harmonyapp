@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:math'; // NEW: Required for generating random numbers.
 
 // Import the restaurant-specific sub-pages
 import 'restaurant/hicafe_page.dart';
@@ -6,16 +7,31 @@ import 'restaurant/breakfast_page.dart';
 import 'restaurant/cafefiesta_page.dart';
 import 'restaurant/locations_page.dart';
 
-// NEW: Import the settings UI components to use for the buttons.
-// Please ensure this path is correct for your project structure.
+// NEW: Import the settings UI components and the new ad dialog.
 import '../settings_ui_components.dart';
+import '../widgets/video_ad_dialog.dart'; // Make sure this path is correct
 
 class RestaurantPage extends StatelessWidget {
   const RestaurantPage({super.key});
 
   static const double _contentMaxWidth = 1200.0;
 
-  /// Builds the header consistent with the other pages.
+  // NEW: This helper method decides whether to show an ad.
+  void _showAdIfNeeded(BuildContext context, VoidCallback onProceed) {
+    final random = Random();
+    // This gives a 1 in 4 (25%) chance of showing an ad. You can adjust this value.
+    if (random.nextInt(4) == 0) {
+      showDialog(
+        context: context,
+        barrierDismissible: false, // Prevent closing by tapping outside the dialog
+        builder: (_) => VideoAdDialog(onSkipped: onProceed),
+      );
+    } else {
+      // If no ad is shown, execute the original action immediately.
+      onProceed();
+    }
+  }
+
   Widget _buildHeader(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
     final colorScheme = Theme.of(context).colorScheme;
@@ -49,9 +65,6 @@ class RestaurantPage extends StatelessWidget {
       ),
     );
   }
-
-  // REMOVED: The custom _buildRestaurantOption widget is no longer needed.
-  // The logic is now handled by the reusable SettingsListItem component.
 
   @override
   Widget build(BuildContext context) {
@@ -91,20 +104,21 @@ class RestaurantPage extends StatelessWidget {
               children: [
                 _buildHeader(context),
                 const SizedBox(height: 8.0),
-                // UPDATED: The list now uses the SettingsListItem component
-                // to create the buttons for a consistent UI.
                 ...List.generate(restaurantActions.length, (index) {
                   final action = restaurantActions[index];
+                  // This is the original action (navigating to a new page).
+                  final VoidCallback proceedAction = () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => action['page'] as Widget),
+                    );
+                  };
+
                   return SettingsListItem(
                     icon: action['icon'] as IconData,
                     label: action['label'] as String,
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => action['page'] as Widget),
-                      );
-                    },
-                    // These flags ensure the corners are rounded correctly for the list.
+                    // UPDATED: The onTap now calls our ad helper method.
+                    onTap: () => _showAdIfNeeded(context, proceedAction),
                     isFirstItem: index == 0,
                     isLastItem: index == restaurantActions.length - 1,
                   );

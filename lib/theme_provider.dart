@@ -9,17 +9,18 @@ class ThemeProvider extends ChangeNotifier {
   static const _prefThemeModeKey = 'theme_mode';
   static const _prefSelectedSchemeKey = 'selected_scheme_key';
   static const _prefUseMaterial3Key = 'use_material3';
-
-  // NEW: Preference key for navigation visibility
   static const _prefNavigationVisibilityKey = 'navigation_visibility';
+  // NEW: Preference key for the ads enabled setting.
+  static const _prefAdsEnabledKey = 'ads_enabled';
 
   // Existing properties
   bool _dynamicColorEnabled;
   ThemeMode _themeMode;
   String _selectedSchemeKey;
   bool _useMaterial3;
+  // NEW: Property to hold the state of ads. Defaults to true.
+  bool _adsEnabled = true;
 
-  // UPDATED: The 'dashboard' key has been removed as it can no longer be hidden.
   Map<String, bool> _visibleDestinations = {
     'food': true,
     'rewards': true,
@@ -42,9 +43,19 @@ class ThemeProvider extends ChangeNotifier {
   ThemeMode get themeMode => _themeMode;
   String get selectedSchemeKey => _selectedSchemeKey;
   bool get useMaterial3 => _useMaterial3;
-
-  // NEW: Public getter for the visibility map.
   Map<String, bool> get visibleDestinations => _visibleDestinations;
+
+  // NEW: Getter for the ads enabled state.
+  bool get adsEnabled => _adsEnabled;
+
+  // NEW: Setter for the ads enabled state, with saving and notification.
+  set adsEnabled(bool value) {
+    if (_adsEnabled != value) {
+      _adsEnabled = value;
+      _saveAdsEnabledPref(value);
+      notifyListeners();
+    }
+  }
 
   // Existing setters and methods
   bool get useDynamicColor => dynamicColorEnabled;
@@ -92,12 +103,11 @@ class ThemeProvider extends ChangeNotifier {
     }
   }
 
-  // NEW: Method to update the visibility of a specific destination.
   Future<void> updateDestinationVisibility(String id, bool isVisible) async {
     if (_visibleDestinations.containsKey(id)) {
       _visibleDestinations[id] = isVisible;
-      await _saveNavigationPreferences(); // Save the new state
-      notifyListeners(); // Notify widgets to rebuild
+      await _saveNavigationPreferences();
+      notifyListeners();
     }
   }
 
@@ -121,7 +131,9 @@ class ThemeProvider extends ChangeNotifier {
 
     _useMaterial3 = prefs.getBool(_prefUseMaterial3Key) ?? true;
 
-    // Call the new method to load navigation settings
+    // NEW: Load the ads enabled preference, defaulting to true.
+    _adsEnabled = prefs.getBool(_prefAdsEnabledKey) ?? true;
+
     await _loadNavigationPreferences(prefs);
 
     notifyListeners();
@@ -147,30 +159,31 @@ class ThemeProvider extends ChangeNotifier {
     await prefs.setBool(_prefUseMaterial3Key, value);
   }
 
-  // NEW: Method to save navigation visibility preferences.
+  // NEW: Method to save the ads enabled preference.
+  Future<void> _saveAdsEnabledPref(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_prefAdsEnabledKey, value);
+  }
+
   Future<void> _saveNavigationPreferences() async {
     final prefs = await SharedPreferences.getInstance();
     String navSettingsString = json.encode(_visibleDestinations);
     await prefs.setString(_prefNavigationVisibilityKey, navSettingsString);
   }
 
-  // NEW: Method to load navigation visibility preferences.
   Future<void> _loadNavigationPreferences(SharedPreferences prefs) async {
     String? navSettingsString = prefs.getString(_prefNavigationVisibilityKey);
     if (navSettingsString != null) {
       try {
         Map<String, dynamic> loadedSettings = json.decode(navSettingsString);
-        // Ensure all keys exist, adding defaults for any new keys not in storage
         Map<String, bool> updatedSettings = {};
         for (var key in _visibleDestinations.keys) {
           updatedSettings[key] = loadedSettings[key] as bool? ?? true;
         }
         _visibleDestinations = updatedSettings;
       } catch (e) {
-        // Handle potential decoding errors if stored data is corrupt
         debugPrint("Could not parse navigation settings: $e");
       }
     }
   }
 }
-
