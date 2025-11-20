@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/foundation.dart' show Factory;
+import '../helpcenter/articles/hotel_help_page.dart';
 
-// NOTE: In a real project, these shared widgets would be moved to their own files
-// in a 'widgets' or 'common' directory to avoid code duplication.
+// --- Custom WebView Widgets ---
 
 // A simple page to display a webview in fullscreen
 class FullscreenWebViewPage extends StatelessWidget {
@@ -100,7 +100,7 @@ class _InteractiveWebViewState extends State<InteractiveWebView> {
         if (_progress < 1.0 && !_hasError)
           LinearProgressIndicator(
             value: _progress,
-            backgroundColor: theme.colorScheme.surfaceVariant,
+            backgroundColor: theme.colorScheme.surfaceContainerHighest,
             valueColor: AlwaysStoppedAnimation<Color>(theme.colorScheme.primary),
           ),
         if (_hasError)
@@ -136,6 +136,7 @@ class _InteractiveWebViewState extends State<InteractiveWebView> {
   }
 }
 
+// --- Main Hotel Page ---
 
 class HotelPage extends StatefulWidget {
   const HotelPage({super.key});
@@ -170,7 +171,6 @@ class _HotelPageState extends State<HotelPage> with TickerProviderStateMixin {
     super.dispose();
   }
 
-  // REFACTORED: This widget builds the content for each tab.
   Widget _buildTabContent({
     required String title,
     required String subtitle,
@@ -223,7 +223,18 @@ class _HotelPageState extends State<HotelPage> with TickerProviderStateMixin {
                   color: Colors.transparent,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.0)),
                   clipBehavior: Clip.antiAlias,
-                  child: InteractiveWebView(url: iframeUrl),
+                  // Using Container with decoration to simulate card border if needed,
+                  // but Card handles clipping for WebView
+                  child: Container(
+                    decoration: BoxDecoration(
+                        border: Border.all(color: colorScheme.outlineVariant),
+                        borderRadius: BorderRadius.circular(16.0)
+                    ),
+                    child: ClipRRect(
+                        borderRadius: BorderRadius.circular(16.0),
+                        child: InteractiveWebView(url: iframeUrl)
+                    ),
+                  ),
                 ),
               ),
             ],
@@ -235,18 +246,47 @@ class _HotelPageState extends State<HotelPage> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
-    // REBUILT with NestedScrollView to fix scrolling issues and improve layout.
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Scaffold(
       body: NestedScrollView(
         headerSliverBuilder: (BuildContext context, bool innerBoxIsScrolled) {
           return <Widget>[
-            SliverAppBar(
-              title: const Text('Hotel'),
+            SliverAppBar.large(
+              title: Text('Hotel', style: TextStyle(color: colorScheme.onSurface)),
+              backgroundColor: colorScheme.surface,
               pinned: true,
               floating: true,
               forceElevated: innerBoxIsScrolled,
+              actions: [
+                IconButton(
+                  icon: const Icon(Icons.help_outline_rounded),
+                  onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const HotelHelpPage())),
+                ),
+              ],
+              flexibleSpace: FlexibleSpaceBar(
+                background: Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [Colors.orange.withOpacity(0.3), colorScheme.surface],
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                    ),
+                  ),
+                  child: Center(
+                    child: Padding(
+                      // Adjust padding to avoid overlapping with the TabBar
+                      padding: const EdgeInsets.only(bottom: 48.0),
+                      child: Icon(Icons.hotel_rounded, size: 80, color: Colors.orange.withOpacity(0.5)),
+                    ),
+                  ),
+                ),
+              ),
               bottom: TabBar(
                 controller: _tabController,
+                labelColor: colorScheme.primary,
+                unselectedLabelColor: colorScheme.onSurfaceVariant,
+                indicatorColor: colorScheme.primary,
                 tabs: const [
                   Tab(icon: Icon(Icons.calendar_month_rounded), text: 'Book'),
                   Tab(icon: Icon(Icons.login_rounded), text: 'Arriving'),

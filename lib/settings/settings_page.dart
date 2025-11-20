@@ -1,191 +1,198 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:hiosdesktop/helpcenter/articles/app_feedback_info_page.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-// Local Imports
-import '../settings_ui_components.dart';
-import '../theme_provider.dart';
+// Import your setting sub-pages
 import 'appearance_settings_page.dart';
-import 'privacy_policy_page.dart';
-import 'websites_page.dart';
-import 'updates_page.dart';
+import 'apps_services_page.dart';
 import 'about_page.dart';
+import 'socials_page.dart';
+import 'updates_page.dart';
+import 'privacy_policy_page.dart';
+// import 'web_settings_page.dart'; // Uncomment if used
 
-class SettingsPage extends StatefulWidget {
+class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key});
 
   @override
-  State<SettingsPage> createState() => _SettingsPageState();
-}
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
 
-class _SettingsPageState extends State<SettingsPage> {
-  // Controller for the text field in the dialog.
-  final TextEditingController _codeController = TextEditingController();
-
-  // The secret code to disable ads.
-  static const String _secretCode = "HIOSMOBILE2021";
-
-  @override
-  void dispose() {
-    _codeController.dispose();
-    super.dispose();
-  }
-
-  // Helper to launch a URL.
-  Future<void> _launchUrl(String url) async {
-    final uri = Uri.parse(url);
-    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not open $url')),
-        );
-      }
-    }
-  }
-
-  // Shows the dialog for entering the ad-removal code.
-  void _showRemoveAdsDialog(BuildContext context) {
-    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
-
-    showDialog(
-      context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          title: const Text("Remove Ads"),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // UPDATED: The text is now clearer about how to get the code.
-              const Text("Tap the button to visit our Facebook page. The secret code will then appear here in a message."),
-              const SizedBox(height: 24),
-              FilledButton.icon(
-                icon: const Icon(Icons.facebook),
-                label: const Text("Go to Facebook Page"),
-                onPressed: () {
-                  _launchUrl("https://www.facebook.com/profile.php?id=100095224335357");
-                  // NEW: Show a SnackBar (toast) with the code after the button is tapped.
-                  // We use the main `context` to ensure the SnackBar can find the Scaffold.
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text("Hint: The secret code is $_secretCode"),
-                      duration: Duration(seconds: 8), // Keep it on screen longer
-                      behavior: SnackBarBehavior.floating,
-                    ),
-                  );
-                },
+    return Scaffold(
+      backgroundColor: colorScheme.surface,
+      body: CustomScrollView(
+        slivers: [
+          // Large Modern Header
+          SliverAppBar.large(
+            expandedHeight: 200.0,
+            pinned: true,
+            backgroundColor: colorScheme.surface,
+            flexibleSpace: FlexibleSpaceBar(
+              title: Text(
+                'Settings',
+                style: TextStyle(color: colorScheme.onSurface),
               ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: _codeController,
-                autofocus: true,
-                decoration: const InputDecoration(
-                  labelText: "Secret Code",
-                  hintText: "Enter code here",
+              background: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      colorScheme.primaryContainer.withOpacity(0.5),
+                      colorScheme.surface,
+                    ],
+                  ),
+                ),
+                child: Center(
+                  child: Icon(
+                    Icons.settings_rounded,
+                    size: 80,
+                    color: colorScheme.primary.withOpacity(0.2),
+                  ),
                 ),
               ),
-            ],
+            ),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: const Text("Cancel"),
+
+          SliverPadding(
+            padding: const EdgeInsets.all(16.0),
+            sliver: SliverList(
+              delegate: SliverChildListDelegate([
+                _buildSectionHeader(context, 'General'),
+                _buildSettingsCard(context, [
+                  _buildTile(
+                    context,
+                    icon: Icons.palette_rounded,
+                    color: Colors.purple,
+                    title: 'Appearance',
+                    subtitle: 'Themes, customization',
+                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AppearanceSettingsPage())),
+                  ),
+                  /*_buildTile(
+                    context,
+                    icon: Icons.apps_rounded,
+                    color: Colors.orange,
+                    title: 'Apps & Services',
+                    subtitle: 'Manage integrations',
+                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AppsServicesPage())),
+                  ),*/
+                ]),
+
+                const SizedBox(height: 24),
+                _buildSectionHeader(context, 'Information'),
+                _buildSettingsCard(context, [
+                  _buildTile(
+                    context,
+                    icon: Icons.info_rounded,
+                    color: Colors.blue,
+                    title: 'About Harmony',
+                    subtitle: 'Version, licenses',
+                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AboutPage())),
+                  ),
+                  _buildTile(
+                    context,
+                    icon: Icons.update_rounded,
+                    color: Colors.green,
+                    title: 'Updates',
+                    subtitle: 'Check for new versions',
+                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const UpdatesPage())),
+                  ),
+                  _buildTile(
+                    context,
+                    icon: Icons.privacy_tip_rounded,
+                    color: Colors.teal,
+                    title: 'Privacy Policy',
+                    subtitle: 'Data usage & terms',
+                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const PrivacyPolicyPage())),
+                  ),
+                ]),
+
+                const SizedBox(height: 24),
+                _buildSectionHeader(context, 'Community'),
+                _buildSettingsCard(context, [
+
+                  _buildTile(
+                    context,
+                    icon: Icons.public,
+                    color: Colors.indigo,
+                    title: 'Socials',
+                    subtitle: 'Join our community',
+                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SocialsPage())),
+                  ),
+                  _buildTile(
+                    context,
+                    icon: Icons.bug_report_rounded,
+                    color: Colors.redAccent,
+                    title: 'Report an Issue',
+                    subtitle: 'Help us improve',
+                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AppFeedbackInfoPage()))
+                  ),
+                ]),
+
+                const SizedBox(height: 40),
+                Center(
+                  child: Text(
+                    'built by nuggetdev',
+                    style: theme.textTheme.labelMedium?.copyWith(color: colorScheme.onSurfaceVariant),
+                  ),
+                ),
+                const SizedBox(height: 20),
+              ]),
             ),
-            TextButton(
-              onPressed: () {
-                if (_codeController.text.trim() == _secretCode) {
-                  // If the code is correct, update the provider and close the dialog.
-                  themeProvider.adsEnabled = false;
-                  Navigator.pop(dialogContext);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("Success! Ads have been disabled.")),
-                  );
-                } else {
-                  // If incorrect, show an error and clear the field.
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("Incorrect code. Please try again."), backgroundColor: Colors.red),
-                  );
-                }
-                _codeController.clear();
-              },
-              child: const Text("Submit"),
-            ),
-          ],
-        );
-      },
+          ),
+        ],
+      ),
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    // We need to watch the provider to rebuild when adsEnabled changes.
-    final themeProvider = context.watch<ThemeProvider>();
+  Widget _buildSectionHeader(BuildContext context, String title) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 16.0, bottom: 8.0),
+      child: Text(
+        title,
+        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+          color: Theme.of(context).colorScheme.primary,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
+  }
 
-    return SettingsPageTemplate(
-      title: "Settings",
-      children: [
-        // --- General Group ---
-        const SettingsGroupTitle(title: "General"),
-        SettingsListItem(
-          icon: Icons.palette_outlined,
-          label: "Appearance",
-          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AppearanceSettingsPage())),
-          isFirstItem: true,
-        ),
-        SettingsListItem(
-          icon: Icons.system_update,
-          label: "Updates",
-          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const UpdatesPage())),
-        ),
-        SettingsListItem(
-          icon: Icons.language_outlined,
-          label: "Websites",
-          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const WebsitesPage())),
-          isLastItem: true,
-        ),
+  Widget _buildSettingsCard(BuildContext context, List<Widget> children) {
+    return Card(
+      elevation: 0,
+      color: Theme.of(context).colorScheme.primaryContainer.withOpacity(0.5),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        children: children,
+      ),
+    );
+  }
 
-        // --- NEW: Support Group ---
-        const SettingsGroupTitle(title: "Support Us"),
-        // Conditionally show either the "Remove Ads" button or the "Ads Enabled" toggle.
-        if (themeProvider.adsEnabled)
-          SettingsListItem(
-            icon: Icons.favorite_border_rounded,
-            label: "Remove Ads",
-            subtitle: "Follow us to get a code and enjoy an ad-free experience.",
-            onTap: () => _showRemoveAdsDialog(context),
-            isFirstItem: true,
-            isLastItem: true,
-          )
-        else
-          SettingsListItem(
-            icon: Icons.favorite_rounded,
-            label: "Ads Enabled",
-            subtitle: "Thank you for your support!",
-            trailing: Switch(
-              value: themeProvider.adsEnabled,
-              onChanged: (value) {
-                themeProvider.adsEnabled = value;
-              },
-            ),
-            isFirstItem: true,
-            isLastItem: true,
-          ),
-
-        // --- About Group ---
-        const SettingsGroupTitle(title: "About"),
-        SettingsListItem(
-          icon: Icons.info_outline,
-          label: "About App",
-          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AboutAppPage())),
-          isFirstItem: true,
+  Widget _buildTile(BuildContext context, {
+    required IconData icon,
+    required Color color,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+  }) {
+    final theme = Theme.of(context);
+    return ListTile(
+      onTap: onTap,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+      leading: Container(
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.1),
+          shape: BoxShape.circle,
         ),
-        SettingsListItem(
-          icon: Icons.privacy_tip_outlined,
-          label: "Privacy Policy",
-          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const PrivacyPolicyPage())),
-          isLastItem: true,
-        ),
-      ],
+        child: Icon(icon, color: color, size: 24),
+      ),
+      title: Text(title, style: theme.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w600)),
+      subtitle: Text(subtitle, style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+      trailing: Icon(Icons.chevron_right_rounded, color: theme.colorScheme.onSurfaceVariant.withOpacity(0.5)),
     );
   }
 }

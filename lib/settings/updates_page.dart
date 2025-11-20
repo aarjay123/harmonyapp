@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
-import '../settings_ui_components.dart';
-
 class UpdatesPage extends StatefulWidget {
   const UpdatesPage({super.key});
 
@@ -46,65 +44,177 @@ class _UpdatesPageState extends State<UpdatesPage> {
 
   @override
   Widget build(BuildContext context) {
-    return SettingsPageTemplate(
-      title: "Updates",
-      children: [
-        // --- Update Harmony Group ---
-        const SettingsGroupTitle(title: "Update Harmony"),
-        SettingsListItem(
-          icon: Icons.download_rounded,
-          label: "Download from GitHub",
-          subtitle: "Get the latest version from our official releases page.",
-          onTap: () => _launchExternalUrl(context, _latestUpdateUrl),
-          isFirstItem: true,
-        ),
-        SettingsListItem(
-          icon: Icons.update_rounded,
-          label: "Set Up Auto-Updates",
-          subtitle: "Visit our site to learn how to get automatic updates on Android.",
-          onTap: () => _launchExternalUrl(context, _autoUpdateUrl),
-          isLastItem: true,
-        ),
+    final colorScheme = Theme.of(context).colorScheme;
 
-        // --- Notifications Group ---
-        const SettingsGroupTitle(title: "Stay Informed"),
-        SettingsListItem(
-          icon: Icons.notifications_active_rounded,
-          label: "Join our Discord",
-          subtitle: "Get notified every time we release a new update.",
-          onTap: () => _launchExternalUrl(context, _discordUrl),
-          isFirstItem: true,
-          isLastItem: true,
-        ),
+    return Scaffold(
+      backgroundColor: colorScheme.surface,
+      body: CustomScrollView(
+        slivers: [
+          // --- Modern Header ---
+          SliverAppBar.large(
+            title: Text('Updates', style: TextStyle(color: colorScheme.onSurface)),
+            backgroundColor: colorScheme.surface,
+            pinned: true,
+            flexibleSpace: FlexibleSpaceBar(
+              background: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.cyan.withOpacity(0.2), // Using Cyan to match your Help Center icons for Updates
+                      colorScheme.surface,
+                    ],
+                  ),
+                ),
+                child: Center(
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 40.0),
+                    child: Icon(
+                      Icons.system_update_rounded,
+                      size: 80,
+                      color: Colors.cyan.withOpacity(0.5),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
 
-        // --- Version Information Group ---
-        const SettingsGroupTitle(title: "Version Information"),
-        SettingsListItem(
-          icon: Icons.new_releases_rounded,
-          label: "What's New?",
-          subtitle: "See the official release notes for the latest version.",
-          onTap: () => _launchExternalUrl(context, _latestUpdateUrl),
-          isFirstItem: true,
-        ),
-        SettingsListItem(
-          icon: Icons.info_rounded,
-          label: "Current Version",
-          subtitle: "You are running version $_version",
-          // This item is purely informational, so it has no onTap action.
-          // The UI component will automatically hide the chevron arrow.
-          isLastItem: true,
-        ),
+          // --- Content ---
+          SliverPadding(
+            padding: const EdgeInsets.all(16.0),
+            sliver: SliverList(
+              delegate: SliverChildListDelegate([
 
-        // --- About Group ---
-        const SettingsGroupTitle(title: "About"),
-        SettingsListItem(
-          icon: Icons.info_outline,
-          label: "About Harmony",
-          subtitle: "Harmony is the successor to HiOSMobile -- the app is now based on Flutter, so is adaptive and cross-platform.\nThis app is much faster and easier to maintain than HiOSMobile and HiOSMobile Lite, so we can bring new features to you faster!",
-          isFirstItem: true,
-          isLastItem: true,
+                // --- Update Harmony Group ---
+                _buildSectionHeader(context, "Update Harmony"),
+                Card(
+                  elevation: 0,
+                  color: colorScheme.primaryContainer.withOpacity(0.5),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20.0)),
+                  clipBehavior: Clip.antiAlias,
+                  child: Column(
+                    children: [
+                      ListTile(
+                        leading: Icon(Icons.download_rounded, color: colorScheme.primary),
+                        title: const Text("Download from GitHub"),
+                        subtitle: const Text("Get the latest version from our official releases page."),
+                        trailing: Icon(Icons.open_in_new_rounded, color: colorScheme.onSurfaceVariant, size: 20),
+                        onTap: () => _launchExternalUrl(context, _latestUpdateUrl),
+                      ),
+                      Divider(height: 1, indent: 16, endIndent: 16, color: colorScheme.outlineVariant),
+                      ListTile(
+                        leading: Icon(Icons.update_rounded, color: colorScheme.primary),
+                        title: const Text("Set Up Auto-Updates"),
+                        subtitle: const Text("Visit our site to learn how to get automatic updates on Android."),
+                        trailing: Icon(Icons.open_in_new_rounded, color: colorScheme.onSurfaceVariant, size: 20),
+                        onTap: () => _launchExternalUrl(context, _autoUpdateUrl),
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 24),
+
+                // --- Stay Informed Group ---
+                _buildSectionHeader(context, "Stay Informed"),
+                Card(
+                  elevation: 0,
+                  color: colorScheme.primaryContainer.withOpacity(0.5),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20.0)),
+                  clipBehavior: Clip.antiAlias,
+                  child: ListTile(
+                    leading: Icon(Icons.notifications_active_rounded, color: colorScheme.primary),
+                    title: const Text("Join our Discord"),
+                    subtitle: const Text("Get notified every time we release a new update."),
+                    trailing: Icon(Icons.open_in_new_rounded, color: colorScheme.onSurfaceVariant, size: 20),
+                    onTap: () => _launchExternalUrl(context, _discordUrl),
+                  ),
+                ),
+
+                const SizedBox(height: 24),
+
+                // --- Version Information Group ---
+                _buildSectionHeader(context, "Version Information"),
+                Card(
+                  elevation: 0,
+                  color: colorScheme.primaryContainer.withOpacity(0.5),
+                  clipBehavior: Clip.antiAlias,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20.0)),
+                  child: Column(
+                    children: [
+                      ListTile(
+                        leading: Icon(Icons.new_releases_rounded, color: colorScheme.primary),
+                        title: const Text("What's New?"),
+                        subtitle: const Text("See the official release notes for the latest version."),
+                        trailing: Icon(Icons.open_in_new_rounded, color: colorScheme.onSurfaceVariant, size: 20),
+                        onTap: () => _launchExternalUrl(context, _latestUpdateUrl),
+                      ),
+                      Divider(height: 1, indent: 16, endIndent: 16, color: colorScheme.outlineVariant),
+                      ListTile(
+                        leading: Icon(Icons.info_rounded, color: colorScheme.primary),
+                        title: const Text("Current Version"),
+                        subtitle: Text("You are running version $_version"),
+                        // Informational only, so no trailing icon or tap action needed
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 24),
+
+                // --- About Group ---
+                _buildSectionHeader(context, "About"),
+                Card(
+                  elevation: 0,
+                  color: colorScheme.primaryContainer.withOpacity(0.5),
+                  clipBehavior: Clip.antiAlias,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20.0)),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(Icons.info_outline, color: colorScheme.primary),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text("About Harmony", style: Theme.of(context).textTheme.titleMedium),
+                              const SizedBox(height: 4),
+                              Text(
+                                "Harmony is the successor to HiOSMobile -- the app is now based on Flutter, so is adaptive and cross-platform.\n\nThis app is much faster and easier to maintain than HiOSMobile and HiOSMobile Lite, so we can bring new features to you faster!",
+                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: colorScheme.onSurfaceVariant),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 40),
+              ]),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSectionHeader(BuildContext context, String title) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 8.0, bottom: 8.0),
+      child: Text(
+        title,
+        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+          color: Theme.of(context).colorScheme.primary,
+          fontWeight: FontWeight.bold,
         ),
-      ],
+      ),
     );
   }
 }

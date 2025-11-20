@@ -83,7 +83,7 @@ class FullscreenMenuPage extends StatelessWidget {
       _MenuItem(
         icon: Icons.help_outline_rounded,
         label: 'Help',
-        page: const HelpcenterPage(),
+        page: const HelpCenterPage(),
       ),
       _MenuItem(
         icon: Icons.web_rounded,

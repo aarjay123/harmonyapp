@@ -72,7 +72,7 @@ class _RewardsPageState extends State<RewardsPage> {
   String? _error;
 
   final String _blogId = '8654667946288784337';
-  final String _apiKey = 'AIzaSyBWqVZsarbdDTsKwabpao7kiVJSvxThvSA'; // IMPORTANT: Replace with your actual key
+  final String _apiKey = 'AIzaSyBWqVZsarbdDTsKwabpao7kiVJSvxThvSA'; // Your specific API key
 
   @override
   void initState() {
@@ -87,7 +87,8 @@ class _RewardsPageState extends State<RewardsPage> {
       _error = null;
     });
 
-    if (_apiKey == 'YOUR_API_KEY') {
+    // Basic check to ensure key is present (though it is hardcoded above)
+    if (_apiKey.isEmpty || _apiKey == 'YOUR_API_KEY') {
       setState(() {
         _error = 'Please configure your Blogger API Key in the code.';
         _isLoading = false;
@@ -96,14 +97,16 @@ class _RewardsPageState extends State<RewardsPage> {
     }
 
     try {
-      final responses = await Future.wait([
+      // Fetch both lists concurrently
+      final results = await Future.wait([
         _fetchOffersByLabel('active-offer'),
         _fetchOffersByLabel('expired-offer'),
       ]);
+
       if (mounted) {
         setState(() {
-          _activeOffers = responses[0];
-          _expiredOffers = responses[1];
+          _activeOffers = _sortOffersByDate(results[0]);
+          _expiredOffers = _sortOffersByDate(results[1]);
         });
       }
     } on Exception catch (e) {
@@ -117,66 +120,93 @@ class _RewardsPageState extends State<RewardsPage> {
     }
   }
 
+  // Helper method to sort offers by date (newest first)
+  List<_Offer> _sortOffersByDate(List<_Offer> offers) {
+    offers.sort((a, b) {
+      if (a.postedDate == null || b.postedDate == null) return 0;
+      return b.postedDate!.compareTo(a.postedDate!);
+    });
+    return offers;
+  }
+
   Future<List<_Offer>> _fetchOffersByLabel(String label) async {
     final url = Uri.parse(
         'https://www.googleapis.com/blogger/v3/blogs/$_blogId/posts?fetchBodies=true&labels=$label&key=$_apiKey');
-    final response = await http.get(url);
 
-    if (response.statusCode == 200) {
-      final data = json.decode(response.body);
-      final List<dynamic> posts = data['items'] ?? [];
-      List<_Offer> offers = posts.map((post) => _Offer.fromBloggerPost(post)).toList();
-      offers.sort((a, b) {
-        if (a.postedDate == null || b.postedDate == null) return 0;
-        return b.postedDate!.compareTo(a.postedDate!);
-      });
-      return offers;
-    } else {
-      throw Exception('Failed to load offers (Status: ${response.statusCode})');
+    try {
+      final response = await http.get(url);
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final List<dynamic> posts = data['items'] ?? [];
+        return posts.map((post) => _Offer.fromBloggerPost(post)).toList();
+      } else {
+        // Instead of throwing immediately, log or return empty so one failure doesn't break everything
+        debugPrint('Failed to load offers for label $label (Status: ${response.statusCode})');
+        return [];
+      }
+    } catch (e) {
+      debugPrint('Error fetching offers for label $label: $e');
+      return [];
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return DefaultTabController(
       length: 2,
       child: Scaffold(
-        body: SafeArea(
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: _contentMaxWidth),
-              child: RefreshIndicator(
-                onRefresh: _fetchOffers,
-                child: NestedScrollView(
-                  headerSliverBuilder: (context, innerBoxIsScrolled) {
-                    return [
-                      SliverToBoxAdapter(child: _buildHeader(context)),
-                      SliverToBoxAdapter(child: _buildBarcodeCard(context)),
-                      SliverPersistentHeader(
-                        delegate: _SliverTabBarDelegate(
-                          TabBar(
-                            tabs: const [
-                              Tab(text: 'Active Offers'),
-                              Tab(text: 'Expired Offers'),
-                            ],
-                          ),
+        backgroundColor: colorScheme.surface,
+        body: RefreshIndicator(
+          onRefresh: _fetchOffers,
+          child: NestedScrollView(
+            headerSliverBuilder: (context, innerBoxIsScrolled) {
+              return [
+                SliverAppBar.large(
+                  title: Text('HiRewards', style: TextStyle(color: colorScheme.onSurface)),
+                  backgroundColor: colorScheme.surface,
+                  pinned: true,
+                  flexibleSpace: FlexibleSpaceBar(
+                    background: Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [Colors.purple.withOpacity(0.3), colorScheme.surface],
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
                         ),
-                        pinned: true,
                       ),
-                    ];
-                  },
-                  body: _isLoading
-                      ? const Center(child: CircularProgressIndicator())
-                      : _error != null
-                      ? _buildErrorView()
-                      : TabBarView(
-                    children: [
-                      _buildOfferList(_activeOffers, 'No active offers available right now.', isExpired: false),
-                      _buildOfferList(_expiredOffers, 'You have no expired offers.', isExpired: true),
+                      child: Center(
+                        // Padding to ensure icon doesn't clash with TabBar or Title
+                        child: Padding(
+                          padding: const EdgeInsets.only(bottom: 48.0),
+                          child: Icon(Icons.loyalty_rounded, size: 80, color: Colors.purple.withOpacity(0.5)),
+                        ),
+                      ),
+                    ),
+                  ),
+                  bottom: TabBar(
+                    labelColor: colorScheme.primary,
+                    unselectedLabelColor: colorScheme.onSurfaceVariant,
+                    indicatorColor: colorScheme.primary,
+                    tabs: const [
+                      Tab(text: 'Active Offers'),
+                      Tab(text: 'Expired Offers'),
                     ],
                   ),
                 ),
-              ),
+              ];
+            },
+            body: _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : _error != null
+                ? _buildErrorView()
+                : TabBarView(
+              children: [
+                _buildOfferList(_activeOffers, 'No active offers available right now.', isExpired: false),
+                _buildOfferList(_expiredOffers, 'You have no expired offers.', isExpired: true),
+              ],
             ),
           ),
         ),
@@ -186,44 +216,24 @@ class _RewardsPageState extends State<RewardsPage> {
 
   // --- Builder Widgets ---
 
-  Widget _buildHeader(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-    final colorScheme = Theme.of(context).colorScheme;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(24.0, 24.0, 24.0, 16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          ShaderMask(
-            blendMode: BlendMode.srcIn,
-            shaderCallback: (bounds) => LinearGradient(
-              colors: [colorScheme.primary, colorScheme.tertiary],
-            ).createShader(Rect.fromLTWH(0, 0, bounds.width, bounds.height)),
-            child: Text('HiRewards', style: textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold)),
-          ),
-          Text('View your offers and membership barcode below.', style: textTheme.titleMedium?.copyWith(color: colorScheme.onSurfaceVariant)),
-        ],
-      ),
-    );
-  }
-
   Widget _buildBarcodeCard(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      padding: const EdgeInsets.all(16.0),
       child: Card(
         elevation: 0,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.0)),
         color: colorScheme.secondaryContainer,
         child: Padding(
-          padding: const EdgeInsets.all(20.0),
+          padding: const EdgeInsets.all(24.0),
           child: Column(
             children: [
               Text('Your Membership', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600, color: colorScheme.onSecondaryContainer)),
               const SizedBox(height: 16),
+              // Using a larger icon to represent the QR code clearly
               Icon(Icons.qr_code_2_rounded, size: 150, color: colorScheme.onSecondaryContainer),
               const SizedBox(height: 16),
-              Text('Please scan this at checkout to apply offers', style: TextStyle(color: colorScheme.onSecondaryContainer)),
+              Text('Please scan this at checkout to apply offers', style: TextStyle(color: colorScheme.onSecondaryContainer), textAlign: TextAlign.center),
             ],
           ),
         ),
@@ -238,18 +248,21 @@ class _RewardsPageState extends State<RewardsPage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.cloud_off_rounded, size: 60),
+            const Icon(Icons.cloud_off_rounded, size: 60, color: Colors.grey),
             const SizedBox(height: 16),
             Text(_error!, textAlign: TextAlign.center, style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 16),
-            ElevatedButton(onPressed: _fetchOffers, child: const Text('Retry')),
+            FilledButton.icon(
+                onPressed: _fetchOffers,
+                icon: const Icon(Icons.refresh),
+                label: const Text('Retry')
+            ),
           ],
         ),
       ),
     );
   }
 
-  // IMPROVED: Added a more engaging empty state
   Widget _buildEmptyListView(String message) {
     return Center(
       child: Padding(
@@ -257,11 +270,11 @@ class _RewardsPageState extends State<RewardsPage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.local_offer_outlined, size: 60, color: Colors.grey),
+            Icon(Icons.local_offer_outlined, size: 60, color: Theme.of(context).colorScheme.outline),
             const SizedBox(height: 16),
             Text(message, textAlign: TextAlign.center, style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 8),
-            Text("Check back later for new rewards!", style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey)),
+            Text("Check back later for new rewards!", style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant)),
           ],
         ),
       ),
@@ -269,13 +282,27 @@ class _RewardsPageState extends State<RewardsPage> {
   }
 
   Widget _buildOfferList(List<_Offer> offers, String emptyMessage, {required bool isExpired}) {
-    if (offers.isEmpty) {
+    // Special handling for the active offers list to include the barcode at the top
+    if (!isExpired && offers.isEmpty) {
+      // Even if empty, show the barcode card
+      return CustomScrollView(
+        slivers: [
+          SliverToBoxAdapter(child: _buildBarcodeCard(context)),
+          SliverFillRemaining(child: _buildEmptyListView(emptyMessage)),
+        ],
+      );
+    } else if (isExpired && offers.isEmpty) {
       return _buildEmptyListView(emptyMessage);
     }
+
     return ListView.builder(
       padding: const EdgeInsets.all(16.0),
-      itemCount: offers.length,
+      itemCount: isExpired ? offers.length : offers.length + 1, // +1 for barcode card in active list
       itemBuilder: (context, index) {
+        if (!isExpired) {
+          if (index == 0) return _buildBarcodeCard(context);
+          return _OfferCard(offer: offers[index - 1], isExpired: isExpired);
+        }
         return _OfferCard(offer: offers[index], isExpired: isExpired);
       },
     );
@@ -316,11 +343,12 @@ class _OfferCard extends StatelessWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final bool showRedeemButton = offer.points != null && !isExpired;
+    final dateFormat = DateFormat.yMMMd();
 
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.0)),
-      color: colorScheme.surfaceVariant,
+      color: colorScheme.surfaceContainerHighest.withOpacity(0.5),
       margin: const EdgeInsets.only(bottom: 16.0),
       clipBehavior: Clip.antiAlias,
       child: Column(
@@ -331,21 +359,43 @@ class _OfferCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(offer.title, style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold, color: colorScheme.onSurfaceVariant)),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Text(offer.title, style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold, color: colorScheme.onSurface)),
+                    ),
+                    if (offer.postedDate != null)
+                      Padding(
+                        padding: const EdgeInsets.only(left: 8.0),
+                        child: Text(
+                          dateFormat.format(offer.postedDate!),
+                          style: theme.textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant.withOpacity(0.6)),
+                        ),
+                      ),
+                  ],
+                ),
                 const SizedBox(height: 8),
-                Text(offer.description, style: theme.textTheme.bodyMedium?.copyWith(color: colorScheme.onSurfaceVariant.withOpacity(0.9))),
+                Text(offer.description, style: theme.textTheme.bodyMedium?.copyWith(color: colorScheme.onSurfaceVariant)),
                 const SizedBox(height: 12),
-                Text(offer.expiryInfo, style: theme.textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant.withOpacity(0.7))),
+                Row(
+                  children: [
+                    Icon(Icons.access_time_rounded, size: 16, color: colorScheme.onSurfaceVariant.withOpacity(0.7)),
+                    const SizedBox(width: 4),
+                    Text(offer.expiryInfo, style: theme.textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant.withOpacity(0.7))),
+                  ],
+                ),
               ],
             ),
           ),
           if (showRedeemButton) ...[
-            const SizedBox(height: 8),
+            Divider(height: 1, color: colorScheme.outlineVariant),
             // IMPROVED: "Ticket stub" style for the redeem button section.
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
               decoration: BoxDecoration(
-                color: colorScheme.primaryContainer.withOpacity(0.4),
+                color: colorScheme.secondaryContainer.withOpacity(0.3),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -353,13 +403,13 @@ class _OfferCard extends StatelessWidget {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text("COST", style: theme.textTheme.labelSmall?.copyWith(color: colorScheme.onPrimaryContainer)),
-                      Text("${offer.points} Points", style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold, color: colorScheme.onPrimaryContainer)),
+                      Text("COST", style: theme.textTheme.labelSmall?.copyWith(color: colorScheme.onSecondaryContainer)),
+                      Text("${offer.points} Points", style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold, color: colorScheme.onSecondaryContainer)),
                     ],
                   ),
-                  ElevatedButton(
+                  FilledButton.tonal(
                     onPressed: () => _showRedeemDialog(context),
-                    style: ElevatedButton.styleFrom(
+                    style: FilledButton.styleFrom(
                       shape: const StadiumBorder(),
                       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
                     ),
@@ -372,37 +422,5 @@ class _OfferCard extends StatelessWidget {
         ],
       ),
     );
-  }
-}
-
-// A custom delegate to make the TabBar stick to the top when scrolling.
-class _SliverTabBarDelegate extends SliverPersistentHeaderDelegate {
-  _SliverTabBarDelegate(this.tabBar);
-  final TabBar tabBar;
-
-  @override
-  double get minExtent => tabBar.preferredSize.height + 16;
-  @override
-  double get maxExtent => tabBar.preferredSize.height + 16;
-
-  @override
-  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
-    final theme = Theme.of(context);
-    return Container(
-      color: theme.scaffoldBackgroundColor,
-      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-      child: Container(
-        decoration: BoxDecoration(
-          color: theme.colorScheme.surfaceVariant.withOpacity(0.8),
-          borderRadius: BorderRadius.circular(50),
-        ),
-        child: tabBar,
-      ),
-    );
-  }
-
-  @override
-  bool shouldRebuild(_SliverTabBarDelegate oldDelegate) {
-    return false;
   }
 }

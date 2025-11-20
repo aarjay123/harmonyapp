@@ -6,12 +6,13 @@ import 'package:dropdown_button2/dropdown_button2.dart';
 import '../theme_provider.dart';
 import '../app_colour_schemes.dart';
 import '../device_info_helper.dart';
-import '../settings_ui_components.dart';
+// We don't need settings_ui_components.dart anymore as we are building custom UI
+// import '../settings_ui_components.dart';
 
 class AppearanceSettingsPage extends StatelessWidget {
   const AppearanceSettingsPage({super.key});
 
-  static const double _dropdownWidth = 200;
+  static const double _dropdownWidth = 160;
 
   @override
   Widget build(BuildContext context) {
@@ -32,80 +33,150 @@ class AppearanceSettingsPage extends StatelessWidget {
       builder: (context, snapshot) {
         final bool supportsDynamicColor = snapshot.data ?? false;
         final bool dynamicColorEnabled = themeProvider.useDynamicColor;
-        final bool useMaterial3 = themeProvider.useMaterial3;
 
-        return SettingsPageTemplate(
-          title: "Appearance",
-          children: [
-            // --- Theme & Colours Group ---
-            const SettingsGroupTitle(title: "Theme & Colours"),
-            SettingsListItem(
-              icon: Icons.brightness_6_outlined,
-              label: "Theme",
-              trailing: _buildThemeDropdown(context, themeProvider, colorScheme),
-              isFirstItem: true,
-              isLastItem: false,
-            ),
-            SettingsListItem(
-              icon: Icons.format_color_fill_outlined,
-              label: "Use Dynamic Colour",
-              subtitle: "Uses colours from your wallpaper (Android 12+)",
-              trailing: Switch(
-                value: dynamicColorEnabled,
-                onChanged: supportsDynamicColor
-                    ? (value) => themeProvider.setUseDynamicColor(value)
-                    : null,
-              ),
-              isLastItem: dynamicColorEnabled,
-            ),
-            /*SettingsListItem(
-              icon: Icons.interests_outlined,
-              label: "Use Material 3 Design",
-              subtitle: "Modern UI elements and features",
-              trailing: Switch(
-                value: useMaterial3,
-                onChanged: (value) => themeProvider.useMaterial3 = value,
-              ),
-            ),*/
-            if (!dynamicColorEnabled)
-              SettingsListItem(
-                icon: Icons.color_lens_outlined,
-                label: "App Colours",
-                trailing: _buildSchemeDropdown(context, themeProvider, colorScheme),
-                isLastItem: true,
-              ),
-
-            // --- UPDATED: Section Renamed and Restyled ---
-            const SettingsGroupTitle(title: "Add or Remove Features"),
-            // UPDATED: Now uses a list of SettingsListItem for a cleaner look.
-            ...navItemNames.entries.map((entry) {
-              final String id = entry.key;
-              final String name = entry.value;
-              final bool isVisible = themeProvider.visibleDestinations[id] ?? true;
-              // Determine if the item is first or last in the list for proper corner rounding.
-              final bool isFirst = id == navItemNames.keys.first;
-              final bool isLast = id == navItemNames.keys.last;
-
-              return SettingsListItem(
-                icon: Icons.visibility, // Using a generic icon for consistency
-                label: name,
-                trailing: Switch(
-                  value: isVisible,
-                  onChanged: (bool value) {
-                    themeProvider.updateDestinationVisibility(id, value);
-                  },
+        return Scaffold(
+          backgroundColor: colorScheme.surface,
+          body: CustomScrollView(
+            slivers: [
+              // --- Modern Header ---
+              SliverAppBar.large(
+                title: Text('Appearance', style: TextStyle(color: colorScheme.onSurface)),
+                backgroundColor: colorScheme.surface,
+                pinned: true,
+                flexibleSpace: FlexibleSpaceBar(
+                  background: Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Colors.purple.withOpacity(0.2), // Matching the purple theme from SettingsPage
+                          colorScheme.surface,
+                        ],
+                      ),
+                    ),
+                    child: Center(
+                      child: Padding(
+                        padding: const EdgeInsets.only(top: 40.0),
+                        child: Icon(
+                          Icons.palette_rounded,
+                          size: 80,
+                          color: Colors.purple.withOpacity(0.5),
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
-                isFirstItem: isFirst,
-                isLastItem: isLast,
-              );
-            }).toList(),
-          ],
+              ),
+
+              // --- Content ---
+              SliverPadding(
+                padding: const EdgeInsets.all(16.0),
+                sliver: SliverList(
+                  delegate: SliverChildListDelegate([
+
+                    // --- Theme & Colours Section ---
+                    _buildSectionHeader(context, "Theme & Colours"),
+                    Card(
+                      elevation: 0,
+                      color: colorScheme.primaryContainer.withOpacity(0.5),
+                      clipBehavior: Clip.antiAlias,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20.0)),
+                      child: Column(
+                        children: [
+                          // Theme Dropdown
+                          ListTile(
+                            leading: Icon(Icons.brightness_6_outlined, color: colorScheme.primary),
+                            title: const Text("Theme"),
+                            trailing: _buildThemeDropdown(context, themeProvider, colorScheme),
+                          ),
+                          Divider(height: 1, indent: 16, endIndent: 16, color: colorScheme.outlineVariant),
+
+                          // Dynamic Color Switch
+                          SwitchListTile(
+                            secondary: Icon(Icons.format_color_fill_outlined, color: colorScheme.primary),
+                            title: const Text("Use Dynamic Colour"),
+                            subtitle: const Text("Match wallpaper (Android 12+)"),
+                            value: dynamicColorEnabled,
+                            onChanged: supportsDynamicColor
+                                ? (value) => themeProvider.setUseDynamicColor(value)
+                                : null,
+                          ),
+
+                          // App Colours Dropdown (only if dynamic color is off)
+                          if (!dynamicColorEnabled) ...[
+                            Divider(height: 1, indent: 16, endIndent: 16, color: colorScheme.outlineVariant),
+                            ListTile(
+                              leading: Icon(Icons.color_lens_outlined, color: colorScheme.primary),
+                              title: const Text("App Colours"),
+                              trailing: _buildSchemeDropdown(context, themeProvider, colorScheme),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 24),
+
+                    // --- Features Section ---
+                    _buildSectionHeader(context, "Customise Features"),
+                    Card(
+                      elevation: 0,
+                      color: colorScheme.primaryContainer.withOpacity(0.5),
+                      clipBehavior: Clip.antiAlias,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20.0)),
+                      child: Column(
+                        children: [
+                          ...navItemNames.entries.map((entry) {
+                            final String id = entry.key;
+                            final String name = entry.value;
+                            final bool isVisible = themeProvider.visibleDestinations[id] ?? true;
+                            final bool isLast = id == navItemNames.keys.last;
+
+                            return Column(
+                              children: [
+                                SwitchListTile(
+                                  secondary: Icon(Icons.visibility_outlined, color: colorScheme.primary),
+                                  title: Text(name),
+                                  value: isVisible,
+                                  onChanged: (bool value) {
+                                    themeProvider.updateDestinationVisibility(id, value);
+                                  },
+                                ),
+                                if (!isLast)
+                                  Divider(height: 1, indent: 16, endIndent: 16, color: colorScheme.outlineVariant),
+                              ],
+                            );
+                          }),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 40),
+                  ]),
+                ),
+              ),
+            ],
+          ),
         );
       },
     );
   }
 
-  // --- Helper methods for dropdowns (no changes needed here) ---
+  Widget _buildSectionHeader(BuildContext context, String title) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 8.0, bottom: 8.0),
+      child: Text(
+        title,
+        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+          color: Theme.of(context).colorScheme.primary,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
+  }
+
+  // --- Helper methods for dropdowns ---
 
   Widget _buildThemeDropdown(BuildContext context, ThemeProvider provider, ColorScheme colorScheme) {
     return SizedBox(
@@ -143,11 +214,11 @@ class AppearanceSettingsPage extends StatelessWidget {
           items: predefinedThemes.entries.map((entry) {
             return DropdownMenuItem(
               value: entry.key,
-              child: Text(entry.key),
+              child: Text(entry.key, overflow: TextOverflow.ellipsis),
             );
           }).toList(),
           buttonStyleData: _dropdownButtonStyle(colorScheme),
-          dropdownStyleData: _dropdownStyle(colorScheme, 200),
+          dropdownStyleData: _dropdownStyle(colorScheme, 300),
           iconStyleData: _dropdownIconStyle(colorScheme),
         ),
       ),
@@ -160,8 +231,7 @@ class AppearanceSettingsPage extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: colorScheme.outline.withOpacity(0.5)),
-        color: colorScheme.surface,
+        color: colorScheme.secondaryContainer, // Slightly darker to stand out on the card
       ),
       elevation: 0,
     );
@@ -173,7 +243,7 @@ class AppearanceSettingsPage extends StatelessWidget {
       width: _dropdownWidth,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(14),
-        color: colorScheme.surfaceContainerHighest,
+        color: colorScheme.secondaryContainer,
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.1),
@@ -185,8 +255,8 @@ class AppearanceSettingsPage extends StatelessWidget {
       elevation: 8,
       scrollbarTheme: ScrollbarThemeData(
         radius: const Radius.circular(8),
-        thickness: MaterialStateProperty.all(6),
-        thumbVisibility: MaterialStateProperty.all(true),
+        thickness: WidgetStateProperty.all(6),
+        thumbVisibility: WidgetStateProperty.all(true),
       ),
     );
   }
@@ -194,7 +264,7 @@ class AppearanceSettingsPage extends StatelessWidget {
   IconStyleData _dropdownIconStyle(ColorScheme colorScheme) {
     return IconStyleData(
       icon: Icon(Icons.keyboard_arrow_down_rounded, color: colorScheme.onSurfaceVariant),
-      iconSize: 24,
+      iconSize: 20,
     );
   }
 }
