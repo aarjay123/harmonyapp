@@ -124,12 +124,12 @@ class _NativeWelcomePageState extends State<NativeWelcomePage> {
           displayName: 'Latest News',
           builder: (context) => const NewsFeedCard(),
         ),
-      if (!kIsWeb)
+      /*if (!kIsWeb)
         'youtube_card': DashboardWidgetModel(
           id: 'youtube_card',
           displayName: 'Videos',
           builder: (context) => const YoutubeCard(),
-        ),
+        ),*/
       'quick_notes': DashboardWidgetModel(
         id: 'quick_notes',
         displayName: 'Quick Notes',
@@ -390,8 +390,8 @@ class _NativeWelcomePageState extends State<NativeWelcomePage> {
 
         final shape = RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(
-            top: isFirst ? const Radius.circular(16.0) : const Radius.circular(5.0),
-            bottom: isLast ? const Radius.circular(16.0) : const Radius.circular(5.0),
+            top: isFirst ? const Radius.circular(20.0) : const Radius.circular(20.0),
+            bottom: isLast ? const Radius.circular(20.0) : const Radius.circular(20.0),
           ),
         );
 
@@ -431,6 +431,12 @@ class _NativeWelcomePageState extends State<NativeWelcomePage> {
   }
 
   Widget _buildTwoColumnLayout(BuildContext context, BoxConstraints constraints) {
+    // Define the shape you want to use consistently.
+    // This is the same shape from your single-column layout, but simplified.
+    final cardShape = RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(20.0),
+    );
+
     if (!_isInEditMode) {
       return Wrap(
         spacing: 8.0,
@@ -439,7 +445,13 @@ class _NativeWelcomePageState extends State<NativeWelcomePage> {
           final itemWidth = (constraints.maxWidth / 2) - 4.0;
           return SizedBox(
             width: itemWidth,
-            child: _buildWidgetTile(context, widgetId),
+            // --- ADD THIS WRAPPER ---
+            child: Material(
+              shape: cardShape,
+              clipBehavior: Clip.antiAlias,
+              child: _buildWidgetTile(context, widgetId),
+            ),
+            // -------------------------
           );
         }).toList(),
       );
@@ -452,14 +464,20 @@ class _NativeWelcomePageState extends State<NativeWelcomePage> {
         crossAxisCount: 2,
         crossAxisSpacing: 8.0,
         mainAxisSpacing: 8.0,
-        childAspectRatio: 0.9,
+        childAspectRatio: 0.9, // You may need to adjust this after adding corners
       ),
       itemCount: _userWidgetOrder.length,
       itemBuilder: (context, index) {
         final widgetId = _userWidgetOrder[index];
-        return SizedBox(
+        return SizedBox( // The SizedBox key is fine, but the child needs the wrapper
           key: ValueKey(widgetId),
-          child: _buildWidgetTile(context, widgetId),
+          // --- ADD THIS WRAPPER ---
+          child: Material(
+            shape: cardShape,
+            clipBehavior: Clip.antiAlias,
+            child: _buildWidgetTile(context, widgetId),
+          ),
+          // -------------------------
         );
       },
       onReorder: (int oldIndex, int newIndex) {

@@ -173,8 +173,10 @@ class _ResponsiveScaffoldState extends State<ResponsiveScaffold> {
   Widget _buildNavigationBar(bool useMaterial3, List<AppDestination> destinations) {
     if (useMaterial3) {
       return NavigationBar(
+        height: 55,
         selectedIndex: _selectedIndex,
         onDestinationSelected: _onItemTapped,
+        labelBehavior: NavigationDestinationLabelBehavior.alwaysHide,
         destinations: destinations.map((dest) {
           return NavigationDestination(
             icon: Icon(dest.icon),
