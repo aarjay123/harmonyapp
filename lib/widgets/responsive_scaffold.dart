@@ -47,7 +47,7 @@ class _ResponsiveScaffoldState extends State<ResponsiveScaffold> {
       AppDestination(id: 'food', label: 'Food', icon: Icons.restaurant_outlined, selectedIcon: Icons.restaurant, page: const RestaurantPage()),
       AppDestination(id: 'rewards', label: 'Rewards', icon: Icons.stars, selectedIcon: Icons.stars, page: const RewardsPage()),
       AppDestination(id: 'hotel', label: 'Hotel', icon: Icons.hotel_outlined, selectedIcon: Icons.hotel, page: const HotelPage()),
-      AppDestination(id: 'room_key', label: 'Room Key', icon: Icons.key_outlined, selectedIcon: Icons.key, page: const RoomKeyPage()),
+      AppDestination(id: 'room_key', label: 'Room Key', icon: Icons.key_outlined, selectedIcon: Icons.key, page: const RoomkeyFragment()),
     ];
   }
 
@@ -106,7 +106,7 @@ class _ResponsiveScaffoldState extends State<ResponsiveScaffold> {
       MiniFabItem(
         icon: Icons.help_outline_rounded,
         label: 'Help',
-        onTap: () => _navigateToPage(const HelpcenterPage()),
+        onTap: () => _navigateToPage(const HelpCenterPage()),
       ),
       MiniFabItem(
         icon: Icons.web_outlined,

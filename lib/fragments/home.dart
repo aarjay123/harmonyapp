@@ -14,9 +14,8 @@ import '../widgets/calendar_card.dart';
 import '../widgets/quick_links_card.dart';
 import '../widgets/daily_affirmation_card.dart';
 import '../widgets/quick_actions_card.dart';
-import '../widgets/countdown_card.dart'; // This now contains the CountdownEvent model
+import '../widgets/countdown_card.dart';
 import '../widgets/todo_list_card.dart';
-import '../widgets/youtube_card.dart';
 // ----------------------------------------
 
 /// Model to hold metadata for each dashboard widget.
@@ -44,7 +43,6 @@ class _NativeWelcomePageState extends State<NativeWelcomePage> {
   String _greeting = '';
   String _formattedDate = '';
   bool _isInEditMode = false;
-  // NEW: State variable to manage the initial loading process.
   bool _isLoading = true;
 
   static const double _contentMaxWidth = 1200.0;
@@ -54,58 +52,48 @@ class _NativeWelcomePageState extends State<NativeWelcomePage> {
   List<CountdownEvent> _allCountdownEvents = [];
   late Map<String, DashboardWidgetModel> _availableWidgets;
 
+  // Cached SharedPreferences instance
+  SharedPreferences? _prefs;
+
   @override
   void initState() {
     super.initState();
-    // UPDATED: All initialization logic is now in a single, robust method.
     _initializeDashboard();
   }
 
-  // NEW: Consolidated initialization method to prevent race conditions.
   Future<void> _initializeDashboard() async {
-    // This part is synchronous and can run first.
     _updateGreetingAndDate();
 
-    // 1. Load all asynchronous data from shared preferences.
-    final prefs = await SharedPreferences.getInstance();
-    final eventsString = prefs.getString('countdownEventsList');
-    final savedOrder = prefs.getStringList('userWidgetOrder');
+    _prefs = await SharedPreferences.getInstance();
+    final eventsString = _prefs?.getString('countdownEventsList');
+    final savedOrder = _prefs?.getStringList('userWidgetOrder');
 
-    // 2. Process the loaded data into state variables.
     if (eventsString != null) {
-      final List<dynamic> eventsJson = json.decode(eventsString);
-      _allCountdownEvents = eventsJson.map((json) => CountdownEvent.fromJson(json)).toList();
-    }
-
-    // 3. Build the available widgets map now that all data is ready.
-    _buildAvailableWidgets();
-
-    // 4. Determine the final widget order.
-    List<String> finalOrder;
-    if (savedOrder == null || savedOrder.isEmpty) {
-      finalOrder = _availableWidgets.keys.toList();
-    } else {
-      // Filter saved order to ensure all widgets still exist.
-      finalOrder = savedOrder.where((id) => _availableWidgets.containsKey(id)).toList();
-      // Add any new widgets that might have been introduced in an update.
-      for (String defaultId in _availableWidgets.keys) {
-        if (!finalOrder.contains(defaultId)) {
-          finalOrder.add(defaultId);
-        }
+      try {
+        final List<dynamic> eventsJson = json.decode(eventsString);
+        _allCountdownEvents = eventsJson.map((json) => CountdownEvent.fromJson(json)).toList();
+      } catch (e) {
+        debugPrint('Error loading events: $e');
       }
     }
 
-    // 5. Set the final state once all data is processed.
+    _buildAvailableWidgets();
+
+    List<String> finalOrder;
+    if (savedOrder == null) {
+      finalOrder = _availableWidgets.keys.toList();
+    } else {
+      finalOrder = savedOrder.where((id) => _availableWidgets.containsKey(id)).toList();
+    }
+
     if (mounted) {
       setState(() {
         _userWidgetOrder = finalOrder;
-        _isLoading = false; // Turn off the loading indicator
+        _isLoading = false;
       });
     }
   }
 
-
-  // This method is now separate to be rebuilt if state changes.
   void _buildAvailableWidgets() {
     _availableWidgets = {
       'weather_card': DashboardWidgetModel(
@@ -124,12 +112,6 @@ class _NativeWelcomePageState extends State<NativeWelcomePage> {
           displayName: 'Latest News',
           builder: (context) => const NewsFeedCard(),
         ),
-      /*if (!kIsWeb)
-        'youtube_card': DashboardWidgetModel(
-          id: 'youtube_card',
-          displayName: 'Videos',
-          builder: (context) => const YoutubeCard(),
-        ),*/
       'quick_notes': DashboardWidgetModel(
         id: 'quick_notes',
         displayName: 'Quick Notes',
@@ -163,7 +145,6 @@ class _NativeWelcomePageState extends State<NativeWelcomePage> {
     };
   }
 
-  // --- Event State Management ---
   void _updateEvents(List<CountdownEvent> updatedEvents) {
     setState(() {
       _allCountdownEvents = updatedEvents;
@@ -171,9 +152,8 @@ class _NativeWelcomePageState extends State<NativeWelcomePage> {
     });
   }
 
-  // --- User Widget Order Management ---
   Future<void> _saveUserWidgetOrder() async {
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = _prefs ?? await SharedPreferences.getInstance();
     await prefs.setStringList('userWidgetOrder', _userWidgetOrder);
   }
 
@@ -187,9 +167,6 @@ class _NativeWelcomePageState extends State<NativeWelcomePage> {
     if (mounted) setState(() {});
   }
 
-  // --- UI Build Methods (Dialogs, Layouts, etc.) ---
-  // No changes needed below this line. The following methods are correct.
-
   void _showAddWidgetDialog() {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
@@ -197,121 +174,104 @@ class _NativeWelcomePageState extends State<NativeWelcomePage> {
     showModalBottomSheet(
       context: context,
       backgroundColor: colorScheme.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(25.0)),
-      ),
+      showDragHandle: true,
+      isScrollControlled: true,
+      useSafeArea: true,
       builder: (BuildContext context) {
         final List<DashboardWidgetModel> widgetsToAdd = _availableWidgets.values
             .where((model) => !_userWidgetOrder.contains(model.id))
             .toList();
 
-        if (widgetsToAdd.isEmpty) {
-          return Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.widgets_rounded, size: 48, color: colorScheme.onSurfaceVariant),
-                const SizedBox(height: 16),
-                Text(
-                  'No more widgets to add!',
-                  style: theme.textTheme.titleMedium?.copyWith(color: colorScheme.onSurfaceVariant),
-                  textAlign: TextAlign.center,
+        return DraggableScrollableSheet(
+          expand: false,
+          initialChildSize: 0.5,
+          maxChildSize: 0.9,
+          minChildSize: 0.3,
+          builder: (context, scrollController) {
+            if (widgetsToAdd.isEmpty) {
+              return Padding(
+                padding: const EdgeInsets.all(32.0),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.check_circle_outline_rounded, size: 64, color: colorScheme.primary),
+                    const SizedBox(height: 16),
+                    Text(
+                      'All widgets added',
+                      style: theme.textTheme.titleLarge,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Your dashboard is fully populated.',
+                      style: theme.textTheme.bodyMedium?.copyWith(color: colorScheme.onSurfaceVariant),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 16),
-                FilledButton.tonal(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('Close'),
-                ),
-              ],
-            ),
-          );
-        }
+              );
+            }
 
-        return Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Add New Widget',
-                style: theme.textTheme.headlineSmall?.copyWith(
-                    color: colorScheme.onSurface,
-                    fontWeight: FontWeight.bold
+            return ListView(
+              controller: scrollController,
+              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 16.0, left: 8.0),
+                  child: Text("Add Widgets", style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
                 ),
-              ),
-              const SizedBox(height: 16),
-              Expanded(
-                child: ListView.builder(
-                  shrinkWrap: true,
-                  itemCount: widgetsToAdd.length,
-                  itemBuilder: (context, index) {
-                    final widgetModel = widgetsToAdd[index];
-                    return Card(
-                      margin: const EdgeInsets.symmetric(vertical: 8.0),
-                      color: colorScheme.surfaceVariant,
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0)),
-                      child: ListTile(
-                        title: Text(widgetModel.displayName, style: theme.textTheme.bodyLarge?.copyWith(color: colorScheme.onSurfaceVariant)),
-                        trailing: Icon(Icons.add_circle_outline, color: colorScheme.primary),
-                        onTap: () {
-                          // FIXED: Moved the save call inside setState for reliability.
+                ...widgetsToAdd.map((widgetModel) {
+                  return Card(
+                    margin: const EdgeInsets.only(bottom: 12.0),
+                    elevation: 0,
+                    color: colorScheme.surfaceContainerHighest,
+                    clipBehavior: Clip.antiAlias,
+                    child: ListTile(
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      title: Text(widgetModel.displayName, style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
+                      trailing: FilledButton.tonalIcon(
+                        onPressed: () {
                           setState(() {
                             _userWidgetOrder.add(widgetModel.id);
                             _saveUserWidgetOrder();
                           });
                           Navigator.pop(context);
                         },
+                        icon: const Icon(Icons.add_rounded),
+                        label: const Text("Add"),
                       ),
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
+                    ),
+                  );
+                }),
+              ],
+            );
+          },
         );
       },
     );
   }
 
   void _showRemoveWidgetDialog(String widgetIdToRemove, String displayName) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
+    final colorScheme = Theme.of(context).colorScheme;
 
     showDialog<void>(
       context: context,
       builder: (BuildContext dialogContext) {
         return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.0)),
-          backgroundColor: colorScheme.surfaceContainerHigh,
-          title: Text(
-            'Remove Widget',
-            style: theme.textTheme.titleLarge?.copyWith(color: colorScheme.onSurface),
-          ),
-          content: Text(
-            'Are you sure you want to remove "$displayName" from your home page?',
-            style: theme.textTheme.bodyLarge?.copyWith(color: colorScheme.onSurfaceVariant),
-          ),
+          title: const Text('Remove Widget'),
+          content: Text('Remove "$displayName" from your dashboard?'),
           actions: <Widget>[
             TextButton(
               onPressed: () => Navigator.of(dialogContext).pop(),
-              child: Text('Cancel', style: TextStyle(color: colorScheme.primary)),
+              child: const Text('Cancel'),
             ),
-            FilledButton(
+            TextButton(
               onPressed: () {
-                // FIXED: Moved the save call inside setState for reliability.
                 setState(() {
                   _userWidgetOrder.remove(widgetIdToRemove);
                   _saveUserWidgetOrder();
                 });
                 Navigator.of(dialogContext).pop();
               },
-              style: FilledButton.styleFrom(
-                backgroundColor: colorScheme.error,
-                foregroundColor: colorScheme.onError,
-              ),
+              style: TextButton.styleFrom(foregroundColor: colorScheme.error),
               child: const Text('Remove'),
             ),
           ],
@@ -320,50 +280,83 @@ class _NativeWelcomePageState extends State<NativeWelcomePage> {
     );
   }
 
+  // --- Layout Builders ---
+
   Widget _buildWidgetTile(BuildContext context, String widgetId) {
-    final theme = Theme.of(context);
     final model = _availableWidgets[widgetId];
+    if (model == null) return const SizedBox.shrink();
 
-    if (model == null) {
-      return const SizedBox.shrink();
-    }
+    final theme = Theme.of(context);
+    final isEditing = _isInEditMode;
 
-    final widgetContent = Theme(
-      data: theme.copyWith(
-        cardTheme: theme.cardTheme.copyWith(
-          margin: EdgeInsets.zero,
-          shape: const RoundedRectangleBorder(),
+    // Re-introduced ClipRRect to enforce the rounded corners
+    Widget content = ClipRRect(
+      borderRadius: BorderRadius.circular(20.0),
+      child: Theme(
+        data: theme.copyWith(
+          cardTheme: theme.cardTheme.copyWith(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20.0)),
+            margin: EdgeInsets.zero, // Remove default margins so we handle spacing in layout
+            clipBehavior: Clip.antiAlias,
+          ),
         ),
+        child: model.builder(context),
       ),
-      child: model.builder(context),
     );
 
-    return Stack(
-      key: ValueKey(widgetId),
-      clipBehavior: Clip.none,
-      children: [
-        widgetContent,
-        Positioned(
-          top: -4,
-          right: -4,
-          child: AnimatedOpacity(
-            opacity: _isInEditMode ? 1.0 : 0.0,
-            duration: const Duration(milliseconds: 250),
-            child: IgnorePointer(
-              ignoring: !_isInEditMode,
-              child: GestureDetector(
-                onTap: () => _showRemoveWidgetDialog(model.id, model.displayName),
-                child: CircleAvatar(
-                  radius: 14,
-                  backgroundColor: theme.colorScheme.errorContainer,
-                  child: Icon(Icons.remove_rounded, size: 18, color: theme.colorScheme.onErrorContainer),
+    if (isEditing) {
+      return Stack(
+        clipBehavior: Clip.none,
+        children: [
+          // Dim the widget slightly in edit mode
+          Opacity(opacity: 0.9, child: content),
+
+          // Remove Button
+          Positioned(
+            top: -8,
+            right: -8,
+            child: GestureDetector(
+              onTap: () => _showRemoveWidgetDialog(model.id, model.displayName),
+              child: Container(
+                decoration: BoxDecoration(
+                    color: theme.colorScheme.error,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: theme.colorScheme.surface, width: 2),
+                    boxShadow: [
+                      BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 4)
+                    ]
+                ),
+                padding: const EdgeInsets.all(8),
+                child: Icon(Icons.close_rounded, size: 20, color: theme.colorScheme.onError),
+              ),
+            ),
+          ),
+
+          // Drag Indicator Overlay
+          Positioned.fill(
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: () {}, // Consume taps to prevent widget interaction while editing
+                borderRadius: BorderRadius.circular(20.0),
+                child: Center(
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.surface.withOpacity(0.8),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(Icons.drag_indicator_rounded, color: theme.colorScheme.onSurface),
+                  ),
                 ),
               ),
             ),
           ),
-        ),
-      ],
-    );
+        ],
+      );
+    }
+
+    return content;
   }
 
   Widget _buildSingleColumnLayout(BuildContext context) {
@@ -373,11 +366,8 @@ class _NativeWelcomePageState extends State<NativeWelcomePage> {
       buildDefaultDragHandles: false,
       itemCount: _userWidgetOrder.length,
       onReorder: (int oldIndex, int newIndex) {
-        // FIXED: Moved the save call inside setState and corrected the reorder logic.
         setState(() {
-          if (newIndex > oldIndex) {
-            newIndex -= 1;
-          }
+          if (newIndex > oldIndex) newIndex -= 1;
           final String item = _userWidgetOrder.removeAt(oldIndex);
           _userWidgetOrder.insert(newIndex, item);
           _saveUserWidgetOrder();
@@ -385,73 +375,35 @@ class _NativeWelcomePageState extends State<NativeWelcomePage> {
       },
       itemBuilder: (context, index) {
         final widgetId = _userWidgetOrder[index];
-        final isFirst = index == 0;
-        final isLast = index == _userWidgetOrder.length - 1;
 
-        final shape = RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(
-            top: isFirst ? const Radius.circular(20.0) : const Radius.circular(20.0),
-            bottom: isLast ? const Radius.circular(20.0) : const Radius.circular(20.0),
-          ),
+        // The content of the item
+        final content = Padding(
+          padding: const EdgeInsets.only(bottom: 12.0),
+          child: _buildWidgetTile(context, widgetId),
         );
 
-        final itemContent = Padding(
-          padding: const EdgeInsets.only(bottom: 2.0),
-          child: Material(
-            shape: shape,
-            clipBehavior: Clip.antiAlias,
-            child: _buildWidgetTile(context, widgetId),
-          ),
+        // Always use ReorderableDelayedDragStartListener but toggle 'enabled'.
+        return ReorderableDelayedDragStartListener(
+          key: ValueKey(widgetId),
+          index: index,
+          enabled: _isInEditMode,
+          child: content,
         );
-
-        if (_isInEditMode) {
-          return ReorderableDelayedDragStartListener(
-            key: ValueKey(widgetId),
-            index: index,
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(child: itemContent),
-                AnimatedOpacity(
-                  opacity: _isInEditMode ? 1.0 : 0.0,
-                  duration: const Duration(milliseconds: 300),
-                  child: Padding(
-                    padding: const EdgeInsets.only(top: 8.0, left: 8.0),
-                    child: Icon(Icons.drag_handle_rounded, color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.5)),
-                  ),
-                ),
-              ],
-            ),
-          );
-        } else {
-          return SizedBox(key: ValueKey(widgetId), child: itemContent);
-        }
       },
     );
   }
 
   Widget _buildTwoColumnLayout(BuildContext context, BoxConstraints constraints) {
-    // Define the shape you want to use consistently.
-    // This is the same shape from your single-column layout, but simplified.
-    final cardShape = RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(20.0),
-    );
-
     if (!_isInEditMode) {
       return Wrap(
-        spacing: 8.0,
-        runSpacing: 8.0,
+        spacing: 12.0,
+        runSpacing: 12.0,
         children: _userWidgetOrder.map((widgetId) {
-          final itemWidth = (constraints.maxWidth / 2) - 4.0;
+          final itemWidth = (constraints.maxWidth / 2) - 6.0;
           return SizedBox(
+            key: ValueKey(widgetId),
             width: itemWidth,
-            // --- ADD THIS WRAPPER ---
-            child: Material(
-              shape: cardShape,
-              clipBehavior: Clip.antiAlias,
-              child: _buildWidgetTile(context, widgetId),
-            ),
-            // -------------------------
+            child: _buildWidgetTile(context, widgetId),
           );
         }).toList(),
       );
@@ -462,26 +414,19 @@ class _NativeWelcomePageState extends State<NativeWelcomePage> {
       physics: const NeverScrollableScrollPhysics(),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
-        crossAxisSpacing: 8.0,
-        mainAxisSpacing: 8.0,
-        childAspectRatio: 0.9, // You may need to adjust this after adding corners
+        crossAxisSpacing: 12.0,
+        mainAxisSpacing: 12.0,
+        childAspectRatio: 0.85,
       ),
       itemCount: _userWidgetOrder.length,
       itemBuilder: (context, index) {
         final widgetId = _userWidgetOrder[index];
-        return SizedBox( // The SizedBox key is fine, but the child needs the wrapper
+        return Container(
           key: ValueKey(widgetId),
-          // --- ADD THIS WRAPPER ---
-          child: Material(
-            shape: cardShape,
-            clipBehavior: Clip.antiAlias,
-            child: _buildWidgetTile(context, widgetId),
-          ),
-          // -------------------------
+          child: _buildWidgetTile(context, widgetId),
         );
       },
       onReorder: (int oldIndex, int newIndex) {
-        // FIXED: Moved the save call inside setState.
         setState(() {
           final String item = _userWidgetOrder.removeAt(oldIndex);
           _userWidgetOrder.insert(newIndex, item);
@@ -499,20 +444,27 @@ class _NativeWelcomePageState extends State<NativeWelcomePage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.widgets_outlined,
-              size: 64,
-              color: theme.colorScheme.onSurfaceVariant.withOpacity(0.5),
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.5),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.dashboard_customize_rounded,
+                size: 48,
+                color: theme.colorScheme.primary,
+              ),
             ),
             const SizedBox(height: 24),
             Text(
-              'Your dashboard is empty',
+              'Design Your Dashboard',
               style: theme.textTheme.headlineSmall?.copyWith(color: theme.colorScheme.onSurface),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 12),
             Text(
-              'Enter edit mode to add new widgets and customize your view.',
+              'Tap the edit button in the top right to add widgets and customize your home.',
               style: theme.textTheme.bodyLarge?.copyWith(color: theme.colorScheme.onSurfaceVariant),
               textAlign: TextAlign.center,
             ),
@@ -522,147 +474,132 @@ class _NativeWelcomePageState extends State<NativeWelcomePage> {
     );
   }
 
-  Widget _buildHeader(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16.0, 24.0, 16.0, 16.0),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                ShaderMask(
-                  blendMode: BlendMode.srcIn,
-                  shaderCallback: (bounds) => LinearGradient(
-                    colors: [colorScheme.primary, colorScheme.tertiary],
-                  ).createShader(
-                    Rect.fromLTWH(0, 0, bounds.width, bounds.height),
-                  ),
-                  child: Text(
-                    _isInEditMode ? 'Edit Mode' : _greeting,
-                    style: textTheme.headlineMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-                if (!_isInEditMode)
-                  Text(
-                    'Welcome to Harmony!',
-                    style: textTheme.titleMedium?.copyWith(
-                      color: colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          if (_isInEditMode)
-            IconButton(
-              icon: Icon(Icons.done_rounded, color: colorScheme.primary),
-              onPressed: () => setState(() => _isInEditMode = false),
-              tooltip: 'Done Editing',
-            ),
-        ],
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
 
-    // Show a loading indicator while the dashboard is being initialized.
     if (_isLoading) {
       return Scaffold(
         backgroundColor: colorScheme.surface,
-        body: const Center(
-          child: CircularProgressIndicator(),
-        ),
+        body: const Center(child: CircularProgressIndicator()),
       );
     }
 
     return Scaffold(
       backgroundColor: colorScheme.surface,
-      body: SafeArea(
-        child: RefreshIndicator(
-          onRefresh: () async {
-            setState(() {
-              _updateGreetingAndDate();
-            });
-          },
-          color: colorScheme.primary,
-          backgroundColor: colorScheme.surfaceContainerHighest,
-          child: CustomScrollView(
-            slivers: [
-              SliverToBoxAdapter(
-                child: _buildHeader(context),
-              ),
-              SliverPadding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                sliver: SliverToBoxAdapter(
-                  child: Center(
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: _contentMaxWidth),
-                      child: LayoutBuilder(
-                        builder: (context, constraints) {
-                          if (_userWidgetOrder.isEmpty) {
-                            return _buildEmptyState(context);
-                          }
-
-                          if (constraints.maxWidth >= _twoColumnBreakpoint) {
-                            return _buildTwoColumnLayout(context, constraints);
-                          } else {
-                            return _buildSingleColumnLayout(context);
-                          }
-                        },
-                      ),
+      floatingActionButton: _isInEditMode
+          ? FloatingActionButton.extended(
+        onPressed: _showAddWidgetDialog,
+        icon: const Icon(Icons.add_rounded),
+        label: const Text("Add Widget"),
+      )
+          : null,
+      body: RefreshIndicator(
+        onRefresh: () async {
+          setState(() => _updateGreetingAndDate());
+        },
+        edgeOffset: 100,
+        child: CustomScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          slivers: [
+            // --- Modern Sliver Header ---
+            SliverAppBar.large(
+              expandedHeight: 160, // Slightly shorter
+              backgroundColor: colorScheme.surface,
+              pinned: true,
+              actions: [
+                Padding(
+                  padding: const EdgeInsets.only(right: 8.0),
+                  child: IconButton(
+                    icon: Icon(
+                      _isInEditMode ? Icons.check_rounded : Icons.edit_rounded,
+                      color: _isInEditMode ? colorScheme.primary : colorScheme.onSurfaceVariant,
                     ),
+                    tooltip: _isInEditMode ? 'Finish Editing' : 'Customize Dashboard',
+                    style: IconButton.styleFrom(
+                      backgroundColor: _isInEditMode ? colorScheme.primaryContainer : null,
+                    ),
+                    onPressed: () => setState(() => _isInEditMode = !_isInEditMode),
                   ),
                 ),
-              ),
-              if (_isInEditMode)
-                SliverToBoxAdapter(
-                  child: Center(
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: _contentMaxWidth),
-                      child: Padding(
-                        padding: const EdgeInsets.fromLTRB(16.0, 24.0, 16.0, 8.0),
-                        child: FilledButton.tonalIcon(
-                          onPressed: _showAddWidgetDialog,
-                          icon: const Icon(Icons.add_box_rounded),
-                          label: const Text('Add New Widget'),
-                          style: FilledButton.styleFrom(
-                            minimumSize: const Size.fromHeight(50),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0)),
-                          ),
+              ],
+              flexibleSpace: FlexibleSpaceBar(
+                // Reduced bottom padding to bring greeting higher up
+                titlePadding: const EdgeInsets.only(left: 16, right: 16, bottom: 16),
+                title: Column(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min, // Important for shrinking
+                  children: [
+                    Text(
+                      _isInEditMode ? 'Edit Layout' : _greeting,
+                      style: TextStyle(
+                        color: colorScheme.onSurface,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 24, // Fixed font size to help stability
+                      ),
+                    ),
+                    // Date is now part of the title column so it moves with it
+                    if (!_isInEditMode)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4.0),
+                        child: Row(
+                          children: [
+                            Icon(Icons.calendar_today_rounded, size: 14, color: colorScheme.primary),
+                            const SizedBox(width: 6),
+                            Text(
+                              _formattedDate,
+                              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                                color: colorScheme.primary,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 12, // Smaller subtitle font
+                              ),
+                            ),
+                          ],
                         ),
                       ),
+                  ],
+                ),
+                background: Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        colorScheme.primaryContainer.withOpacity(0.4),
+                        colorScheme.surface,
+                      ],
                     ),
                   ),
                 ),
-              SliverToBoxAdapter(
+              ),
+            ),
+
+            // --- Widget Content ---
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 100.0), // Extra bottom padding for FAB
+              sliver: SliverToBoxAdapter(
                 child: Center(
                   child: ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: _contentMaxWidth),
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(16.0, 8.0, 16.0, 24.0),
-                      child: FilledButton.tonal(
-                        onPressed: () => setState(() => _isInEditMode = !_isInEditMode),
-                        style: FilledButton.styleFrom(
-                          minimumSize: const Size.fromHeight(50),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0)),
-                        ),
-                        child: Text(_isInEditMode ? 'Done Editing' : 'Edit Widgets'),
-                      ),
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        if (_userWidgetOrder.isEmpty) {
+                          return _buildEmptyState(context);
+                        }
+
+                        if (constraints.maxWidth >= _twoColumnBreakpoint) {
+                          return _buildTwoColumnLayout(context, constraints);
+                        } else {
+                          return _buildSingleColumnLayout(context);
+                        }
+                      },
                     ),
                   ),
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
