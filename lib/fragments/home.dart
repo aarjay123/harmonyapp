@@ -282,21 +282,23 @@ class _NativeWelcomePageState extends State<NativeWelcomePage> {
 
   // --- Layout Builders ---
 
-  Widget _buildWidgetTile(BuildContext context, String widgetId) {
+  /// Builds a single widget tile.
+  /// [index] is required only for List View dragging to work on the handle specifically.
+  Widget _buildWidgetTile(BuildContext context, String widgetId, {int? index}) {
     final model = _availableWidgets[widgetId];
     if (model == null) return const SizedBox.shrink();
 
     final theme = Theme.of(context);
     final isEditing = _isInEditMode;
 
-    // Re-introduced ClipRRect to enforce the rounded corners
+    // The actual widget content
     Widget content = ClipRRect(
       borderRadius: BorderRadius.circular(20.0),
       child: Theme(
         data: theme.copyWith(
           cardTheme: theme.cardTheme.copyWith(
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20.0)),
-            margin: EdgeInsets.zero, // Remove default margins so we handle spacing in layout
+            margin: EdgeInsets.zero,
             clipBehavior: Clip.antiAlias,
           ),
         ),
@@ -308,10 +310,58 @@ class _NativeWelcomePageState extends State<NativeWelcomePage> {
       return Stack(
         clipBehavior: Clip.none,
         children: [
-          // Dim the widget slightly in edit mode
-          Opacity(opacity: 0.9, child: content),
+          // 1. Dim the widget content and prevent interaction with it
+          Opacity(
+            opacity: 0.6,
+            child: AbsorbPointer(
+              absorbing: true,
+              child: content,
+            ),
+          ),
 
-          // Remove Button
+          // 2. Drag Handle (Center)
+          // We wrap this specific visual in the drag listener if an index is provided (List View).
+          Positioned.fill(
+            child: Center(
+              child: Container(
+                width: 60,
+                height: 60,
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.surface.withOpacity(0.9),
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 8,
+                      spreadRadius: 1,
+                    )
+                  ],
+                ),
+                child: Builder(
+                  builder: (context) {
+                    final icon = Icon(
+                      Icons.drag_indicator_rounded, 
+                      color: theme.colorScheme.onSurface,
+                      size: 32,
+                    );
+                    
+                    // If we are in the list view (index provided), make THIS specific button draggable.
+                    if (index != null) {
+                      return ReorderableDragStartListener(
+                        index: index,
+                        child: icon,
+                      );
+                    }
+                    // For grid view, the library handles long press on the container.
+                    return icon;
+                  }
+                ),
+              ),
+            ),
+          ),
+
+          // 3. Remove Button (Top Right)
+          // MOVED TO END of children list so it sits ON TOP of everything else.
           Positioned(
             top: -8,
             right: -8,
@@ -331,27 +381,6 @@ class _NativeWelcomePageState extends State<NativeWelcomePage> {
               ),
             ),
           ),
-
-          // Drag Indicator Overlay
-          Positioned.fill(
-            child: Material(
-              color: Colors.transparent,
-              child: InkWell(
-                onTap: () {}, // Consume taps to prevent widget interaction while editing
-                borderRadius: BorderRadius.circular(20.0),
-                child: Center(
-                  child: Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.surface.withOpacity(0.8),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(Icons.drag_indicator_rounded, color: theme.colorScheme.onSurface),
-                  ),
-                ),
-              ),
-            ),
-          ),
         ],
       );
     }
@@ -363,7 +392,7 @@ class _NativeWelcomePageState extends State<NativeWelcomePage> {
     return ReorderableListView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      buildDefaultDragHandles: false,
+      buildDefaultDragHandles: false, // We provide custom handles
       itemCount: _userWidgetOrder.length,
       onReorder: (int oldIndex, int newIndex) {
         setState(() {
@@ -375,19 +404,11 @@ class _NativeWelcomePageState extends State<NativeWelcomePage> {
       },
       itemBuilder: (context, index) {
         final widgetId = _userWidgetOrder[index];
-
-        // The content of the item
-        final content = Padding(
-          padding: const EdgeInsets.only(bottom: 12.0),
-          child: _buildWidgetTile(context, widgetId),
-        );
-
-        // Always use ReorderableDelayedDragStartListener but toggle 'enabled'.
-        return ReorderableDelayedDragStartListener(
+        // Pass index to enable specific drag handle
+        return Padding(
           key: ValueKey(widgetId),
-          index: index,
-          enabled: _isInEditMode,
-          child: content,
+          padding: const EdgeInsets.only(bottom: 12.0),
+          child: _buildWidgetTile(context, widgetId, index: index),
         );
       },
     );
@@ -421,6 +442,9 @@ class _NativeWelcomePageState extends State<NativeWelcomePage> {
       itemCount: _userWidgetOrder.length,
       itemBuilder: (context, index) {
         final widgetId = _userWidgetOrder[index];
+        // Note: ReorderableGridView usually relies on LongPress on the item itself.
+        // We don't pass 'index' here to _buildWidgetTile because ReorderableGridView
+        // handles the listeners internally differently than ListView.
         return Container(
           key: ValueKey(widgetId),
           child: _buildWidgetTile(context, widgetId),
@@ -504,7 +528,7 @@ class _NativeWelcomePageState extends State<NativeWelcomePage> {
           slivers: [
             // --- Modern Sliver Header ---
             SliverAppBar.large(
-              expandedHeight: 160, // Slightly shorter
+              expandedHeight: 160,
               backgroundColor: colorScheme.surface,
               pinned: true,
               actions: [
@@ -524,60 +548,52 @@ class _NativeWelcomePageState extends State<NativeWelcomePage> {
                 ),
               ],
               flexibleSpace: FlexibleSpaceBar(
-                // Reduced bottom padding to bring greeting higher up
                 titlePadding: const EdgeInsets.only(left: 16, right: 16, bottom: 16),
-                title: Column(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min, // Important for shrinking
-                  children: [
-                    Text(
-                      _isInEditMode ? 'Edit Layout' : _greeting,
-                      style: TextStyle(
-                        color: colorScheme.onSurface,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 24, // Fixed font size to help stability
-                      ),
-                    ),
-                    // Date is now part of the title column so it moves with it
-                    if (!_isInEditMode)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 4.0),
-                        child: Row(
-                          children: [
-                            Icon(Icons.calendar_today_rounded, size: 14, color: colorScheme.primary),
-                            const SizedBox(width: 6),
-                            Text(
-                              _formattedDate,
-                              style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                                color: colorScheme.primary,
-                                fontWeight: FontWeight.w600,
-                                fontSize: 12, // Smaller subtitle font
-                              ),
-                            ),
-                          ],
+                // WRAPPED TITLE IN FITTEDBOX TO PREVENT OVERFLOW
+                title: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        _isInEditMode ? 'Edit Layout' : _greeting,
+                        style: TextStyle(
+                          color: colorScheme.onSurface,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 24,
                         ),
                       ),
-                  ],
-                ),
-                background: Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        colorScheme.primaryContainer.withOpacity(0.4),
-                        colorScheme.surface,
-                      ],
-                    ),
+                      if (!_isInEditMode)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4.0),
+                          child: Row(
+                            children: [
+                              Icon(Icons.calendar_today_rounded, size: 14, color: colorScheme.primary),
+                              const SizedBox(width: 6),
+                              Text(
+                                _formattedDate,
+                                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                                  color: colorScheme.primary,
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
                   ),
                 ),
+                // Gradient removed (defaults to surface color)
               ),
             ),
 
             // --- Widget Content ---
             SliverPadding(
-              padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 100.0), // Extra bottom padding for FAB
+              padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 100.0),
               sliver: SliverToBoxAdapter(
                 child: Center(
                   child: ConstrainedBox(
